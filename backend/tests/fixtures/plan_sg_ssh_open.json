@@ -1,0 +1,144 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.8",
+  "resource_drift": [
+    {
+      "address": "aws_security_group.web",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "web",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "id": "sg-0123456789abcdef0",
+          "name": "plumbline-sandbox-web",
+          "ingress": [
+            {
+              "cidr_blocks": ["10.0.0.0/8"],
+              "ipv6_cidr_blocks": [],
+              "prefix_list_ids": [],
+              "security_groups": [],
+              "self": false,
+              "description": "HTTPS from the internal network",
+              "from_port": 443,
+              "to_port": 443,
+              "protocol": "tcp"
+            }
+          ],
+          "egress": [
+            {
+              "cidr_blocks": ["0.0.0.0/0"],
+              "ipv6_cidr_blocks": [],
+              "prefix_list_ids": [],
+              "security_groups": [],
+              "self": false,
+              "description": "Permit outbound",
+              "from_port": 0,
+              "to_port": 0,
+              "protocol": "-1"
+            }
+          ],
+          "tags": {"Project": "PlumbLine", "ManagedBy": "terraform"}
+        },
+        "after": {
+          "id": "sg-0123456789abcdef0",
+          "name": "plumbline-sandbox-web",
+          "ingress": [
+            {
+              "cidr_blocks": ["10.0.0.0/8"],
+              "ipv6_cidr_blocks": [],
+              "prefix_list_ids": [],
+              "security_groups": [],
+              "self": false,
+              "description": "HTTPS from the internal network",
+              "from_port": 443,
+              "to_port": 443,
+              "protocol": "tcp"
+            },
+            {
+              "cidr_blocks": ["0.0.0.0/0"],
+              "ipv6_cidr_blocks": [],
+              "prefix_list_ids": [],
+              "security_groups": [],
+              "self": false,
+              "description": "manually added ssh",
+              "from_port": 22,
+              "to_port": 22,
+              "protocol": "tcp"
+            }
+          ],
+          "egress": [
+            {
+              "cidr_blocks": ["0.0.0.0/0"],
+              "ipv6_cidr_blocks": [],
+              "prefix_list_ids": [],
+              "security_groups": [],
+              "self": false,
+              "description": "Permit outbound",
+              "from_port": 0,
+              "to_port": 0,
+              "protocol": "-1"
+            }
+          ],
+          "tags": {"Project": "PlumbLine", "ManagedBy": "terraform"}
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    }
+  ],
+  "resource_changes": [
+    {
+      "address": "aws_security_group.web",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "web",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {"id": "sg-0123456789abcdef0"},
+        "after": {"id": "sg-0123456789abcdef0"},
+        "before_sensitive": false,
+        "after_sensitive": false,
+        "action_reason": null
+      }
+    }
+  ],
+  "configuration": {
+    "provider_config": {
+      "aws": {
+        "name": "aws",
+        "expressions": {"region": {"constant_value": "us-east-1"}}
+      }
+    },
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_security_group.web",
+          "mode": "managed",
+          "type": "aws_security_group",
+          "name": "web",
+          "provider_config_key": "aws",
+          "expressions": {},
+          "schema_version": 1
+        },
+        {
+          "address": "aws_instance.app",
+          "mode": "managed",
+          "type": "aws_instance",
+          "name": "app",
+          "provider_config_key": "aws",
+          "expressions": {
+            "vpc_security_group_ids": {
+              "references": ["aws_security_group.web.id", "aws_security_group.web"]
+            }
+          },
+          "schema_version": 1
+        }
+      ]
+    }
+  },
+  "prior_state": {"format_version": "1.0", "values": {}},
+  "relevant_attributes": []
+}

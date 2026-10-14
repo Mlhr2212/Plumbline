@@ -1,0 +1,32 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.8",
+  "resource_drift": [
+    {
+      "address": "aws_iam_policy.app",
+      "mode": "managed",
+      "type": "aws_iam_policy",
+      "name": "app",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "arn": "arn:aws:iam::123456789012:policy/plumbline-app",
+          "name": "plumbline-app",
+          "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:GetObject\"],\"Resource\":\"arn:aws:s3:::plumbline-data/*\"}]}"
+        },
+        "after": {
+          "arn": "arn:aws:iam::123456789012:policy/plumbline-app",
+          "name": "plumbline-app",
+          "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:GetObject\"],\"Resource\":\"arn:aws:s3:::plumbline-data/*\"},{\"Effect\":\"Allow\",\"Action\":\"*\",\"Resource\":\"*\"}]}"
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    }
+  ],
+  "resource_changes": [],
+  "configuration": {"root_module": {"resources": []}},
+  "prior_state": {"format_version": "1.0", "values": {}},
+  "relevant_attributes": []
+}

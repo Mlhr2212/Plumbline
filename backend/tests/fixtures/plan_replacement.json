@@ -1,0 +1,40 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.8",
+  "resource_drift": [
+    {
+      "address": "aws_instance.app",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "app",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {"id": "i-0abcdef1234567890", "ami": "ami-11111111111111111"},
+        "after": {"id": "i-0abcdef1234567890", "ami": "ami-22222222222222222"},
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    }
+  ],
+  "resource_changes": [
+    {
+      "address": "aws_instance.app",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "app",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete", "create"],
+        "before": {"id": "i-0abcdef1234567890", "ami": "ami-22222222222222222"},
+        "after": {"id": "i-0abcdef1234567890", "ami": "ami-11111111111111111"},
+        "before_sensitive": false,
+        "after_sensitive": false,
+        "action_reason": "replace_because_cannot_update"
+      }
+    }
+  ],
+  "configuration": {"root_module": {"resources": []}},
+  "prior_state": {"format_version": "1.0", "values": {}},
+  "relevant_attributes": []
+}

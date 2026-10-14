@@ -1,0 +1,47 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.8",
+  "resource_drift": [
+    {
+      "address": "aws_instance.app",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "app",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "id": "i-0abcdef1234567890",
+          "instance_type": "t3.micro",
+          "tags": {"Name": "plumbline-sandbox-app", "ManagedBy": "terraform"}
+        },
+        "after": {
+          "id": "i-0abcdef1234567890",
+          "instance_type": "t3.large",
+          "tags": {"Name": "plumbline-sandbox-app", "ManagedBy": "terraform"}
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    }
+  ],
+  "resource_changes": [
+    {
+      "address": "aws_instance.app",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "app",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {"id": "i-0abcdef1234567890", "instance_type": "t3.micro"},
+        "after": {"id": "i-0abcdef1234567890", "instance_type": "t3.micro"},
+        "before_sensitive": false,
+        "after_sensitive": false
+      }
+    }
+  ],
+  "configuration": {"root_module": {"resources": []}},
+  "prior_state": {"format_version": "1.0", "values": {}},
+  "relevant_attributes": []
+}

@@ -1,0 +1,92 @@
+name: PlumbLine Drift Scan
+
+# Scheduled drift detection against the Terraform-managed sandbox.
+# Pull-request runs generate a plan for review but are NOT drift scans —
+# developer config changes must never create drift incidents.
+
+on:
+  schedule:
+    - cron: "7 * * * *"   # hourly
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "dev"
+  pull_request:
+    paths:
+      - "terraform/sandbox/**"
+
+permissions:
+  id-token: write       # GitHub OIDC -> AWS (no long-lived access keys)
+  contents: read
+
+env:
+  TF_WORKING_DIR: terraform/sandbox
+  AWS_REGION: us-east-1
+
+jobs:
+  drift-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DRIFT_SCAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          set +e
+          terraform plan -detailed-exitcode -out=tfplan -no-color -input=false
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          # 0 = clean, 2 = changes present (valid, not a failure), 1 = error
+          if [ "$code" -eq 1 ]; then
+            echo "terraform plan failed" >&2
+            exit 1
+          fi
+          exit 0
+
+      - name: Render plan JSON
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform show -json tfplan > tfplan.json
+
+      - name: Ingest plan into PlumbLine
+        # Scheduled/dispatch runs are drift scans; PR runs are review-only.
+        if: github.event_name != 'pull_request'
+        env:
+          PLUMBLINE_INGEST_SECRET: ${{ secrets.PLUMBLINE_INGEST_SECRET }}
+          PLUMBLINE_API_URL: ${{ vars.PLUMBLINE_API_URL }}
+          SCAN_ENVIRONMENT: ${{ inputs.environment || 'dev' }}
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          python3 "$GITHUB_WORKSPACE/scripts/ingest_plan.py" \
+            --api-url "$PLUMBLINE_API_URL" \
+            --environment "$SCAN_ENVIRONMENT" \
+            --account-id "$ACCOUNT_ID" \
+            --region "$AWS_REGION" \
+            --plan-file "$TF_WORKING_DIR/tfplan.json" \
+            --exit-code "${{ steps.plan.outputs.exit_code }}"
+
+      - name: Upload plan artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ github.run_id }}
+          path: ${{ env.TF_WORKING_DIR }}/tfplan.json
+          retention-days: 14
+          if-no-files-found: ignore

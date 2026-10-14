@@ -1,0 +1,32 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.8",
+  "resource_drift": [
+    {
+      "address": "aws_db_instance.main",
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "id": "db-ABCDEF",
+          "instance_class": "db.t3.micro",
+          "password": "super-secret-old-value"
+        },
+        "after": {
+          "id": "db-ABCDEF",
+          "instance_class": "db.t3.micro",
+          "password": "super-secret-new-value"
+        },
+        "before_sensitive": {"password": true},
+        "after_sensitive": {"password": true}
+      }
+    }
+  ],
+  "resource_changes": [],
+  "configuration": {"root_module": {"resources": []}},
+  "prior_state": {"format_version": "1.0", "values": {}},
+  "relevant_attributes": []
+}

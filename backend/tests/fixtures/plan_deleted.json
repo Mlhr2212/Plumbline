@@ -1,0 +1,45 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.8",
+  "resource_drift": [
+    {
+      "address": "aws_lambda_function.worker",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "worker",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete"],
+        "before": {
+          "id": "plumbline-sandbox-worker",
+          "function_name": "plumbline-sandbox-worker",
+          "runtime": "python3.12",
+          "handler": "handler.handler"
+        },
+        "after": null,
+        "before_sensitive": {},
+        "after_sensitive": false
+      }
+    }
+  ],
+  "resource_changes": [
+    {
+      "address": "aws_lambda_function.worker",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "worker",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {"function_name": "plumbline-sandbox-worker"},
+        "before_sensitive": false,
+        "after_sensitive": false,
+        "action_reason": "replace_because_resource_drifted"
+      }
+    }
+  ],
+  "configuration": {"root_module": {"resources": []}},
+  "prior_state": {"format_version": "1.0", "values": {}},
+  "relevant_attributes": []
+}
