@@ -33,3 +33,6 @@ dist/
 *.pem
 *.key
 secrets/
+
+# Terraform packaging artifacts
+.build/

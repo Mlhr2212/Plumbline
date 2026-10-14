@@ -27,6 +27,18 @@ variable "github_oidc_provider_arn" {
   default     = ""
 }
 
+variable "github_owner_id" {
+  description = "GitHub owner numeric ID from the OIDC sub claim (owner@<id>). Empty = match by owner/name instead."
+  type        = string
+  default     = ""
+}
+
+variable "github_repo_id" {
+  description = "GitHub repository numeric ID from the OIDC sub claim (repo@<id>). Empty = match by owner/name instead."
+  type        = string
+  default     = ""
+}
+
 variable "api_instance_type" {
   description = "EC2 instance type for the PlumbLine API host."
   type        = string

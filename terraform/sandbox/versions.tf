@@ -12,15 +12,14 @@ terraform {
     }
   }
 
-  # Remote state is strongly recommended once the scheduled GitHub Actions
-  # scan runs against this sandbox — configure the bucket created by
-  # terraform/plumbline, then uncomment:
-  #
-  # backend "s3" {
-  #   bucket         = "plumbline-tfstate-<account_id>"
-  #   key            = "sandbox/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   encrypt        = true
-  #   dynamodb_table = "plumbline-tfstate-lock"
-  # }
+  # Remote state in the PlumbLine-created bucket — required so every GitHub
+  # Actions runner sees the same sandbox state (local state would make each
+  # scheduled scan plan "create everything" and hide real drift).
+  backend "s3" {
+    bucket         = "plumbline-tfstate-376634957118"
+    key            = "sandbox/terraform.tfstate"
+    region         = "us-east-2"
+    encrypt        = true
+    dynamodb_table = "plumbline-tfstate-lock"
+  }
 }

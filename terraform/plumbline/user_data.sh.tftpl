@@ -5,7 +5,13 @@ exec > >(tee /var/log/plumbline-bootstrap.log) 2>&1
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y python3 python3-venv python3-pip awscli unzip
+apt-get install -y python3 python3-venv python3-pip unzip curl
+
+# AWS CLI v2 official installer (the 'awscli' deb is not in Ubuntu 24.04's
+# enabled repositories).
+curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+unzip -q /tmp/awscliv2.zip -d /tmp
+/tmp/aws/install --update
 
 APP_DIR=/opt/plumbline/backend
 mkdir -p "$APP_DIR"

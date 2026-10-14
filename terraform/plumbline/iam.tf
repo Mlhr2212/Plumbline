@@ -39,10 +39,17 @@ data "aws_iam_policy_document" "scanner_trust" {
       values   = ["sts.amazonaws.com"]
     }
 
+    # GitHub issues sub claims as repo:<owner>@<owner_id>/<repo>@<repo_id>:<context>
+    # (ID-suffixed format). Matching on the immutable IDs also survives renames.
+    # Fall back to the legacy owner/name format when IDs aren't provided.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:*"]
+      values = var.github_repo_id != "" ? [
+        "repo:*@${var.github_owner_id}/*@${var.github_repo_id}:*",
+        ] : [
+        "repo:${var.github_repository}:*",
+      ]
     }
   }
 }

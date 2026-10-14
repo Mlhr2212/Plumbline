@@ -83,6 +83,10 @@ resource "aws_instance" "api" {
   vpc_security_group_ids = [aws_security_group.api.id]
   key_name               = var.ssh_key_name != "" ? var.ssh_key_name : null
 
+  # user_data only executes on first boot; replace the instance when it
+  # changes so bootstrap edits actually take effect.
+  user_data_replace_on_change = true
+
   depends_on = [aws_s3_object.backend_code]
 
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
