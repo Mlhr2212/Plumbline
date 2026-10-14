@@ -157,6 +157,14 @@ data "aws_iam_policy_document" "api_runtime" {
     actions   = ["cloudtrail:LookupEvents"]
     resources = ["*"]
   }
+
+  # Bootstrap secrets — read-only, scoped to the PlumbLine path.
+  statement {
+    sid       = "SSMSecretsRead"
+    effect    = "Allow"
+    actions   = ["ssm:GetParameter"]
+    resources = ["arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/plumbline/*"]
+  }
 }
 
 resource "aws_iam_role_policy" "api_runtime" {

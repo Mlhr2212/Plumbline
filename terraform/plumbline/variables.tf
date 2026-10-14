@@ -27,6 +27,30 @@ variable "github_oidc_provider_arn" {
   default     = ""
 }
 
+variable "api_instance_type" {
+  description = "EC2 instance type for the PlumbLine API host."
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "api_ingress_cidr" {
+  description = "CIDR allowed to reach the API on port 8000. Default is open for the portfolio demo — restrict to your IP/VPN for anything real."
+  type        = string
+  default     = "0.0.0.0/0"
+}
+
+variable "ssh_cidr" {
+  description = "Optional CIDR allowed SSH access (empty = no SSH rule)."
+  type        = string
+  default     = ""
+}
+
+variable "ssh_key_name" {
+  description = "Optional EC2 key pair name for SSH debugging."
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Common tags."
   type        = map(string)

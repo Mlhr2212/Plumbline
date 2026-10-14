@@ -23,7 +23,7 @@ permissions:
 
 env:
   TF_WORKING_DIR: terraform/sandbox
-  AWS_REGION: us-east-1
+  AWS_REGION: us-east-2
 
 jobs:
   drift-scan:

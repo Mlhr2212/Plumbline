@@ -1,0 +1,61 @@
+#!/bin/bash
+# PlumbLine API bootstrap (Ubuntu 24.04)
+set -euo pipefail
+exec > >(tee /var/log/plumbline-bootstrap.log) 2>&1
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y python3 python3-venv python3-pip awscli unzip
+
+APP_DIR=/opt/plumbline/backend
+mkdir -p "$APP_DIR"
+
+aws s3 cp "s3://${code_bucket}/${code_key}" /tmp/backend.zip --region "${region}"
+unzip -o /tmp/backend.zip -d "$APP_DIR"
+
+python3 -m venv "$APP_DIR/.venv"
+"$APP_DIR/.venv/bin/pip" install --quiet --upgrade pip
+"$APP_DIR/.venv/bin/pip" install --quiet "$APP_DIR"
+
+# Secrets come from SSM SecureString — never baked into the image or tfstate.
+INGEST_SECRET=$(aws ssm get-parameter --name /plumbline/ingest_hmac_secret \
+  --with-decryption --region "${region}" --query Parameter.Value --output text)
+API_KEY=$(aws ssm get-parameter --name /plumbline/api_key \
+  --with-decryption --region "${region}" --query Parameter.Value --output text)
+
+cat > "$APP_DIR/.env" <<ENV
+PLUMBLINE_ENVIRONMENT=${environment}
+PLUMBLINE_STORAGE_BACKEND=dynamodb
+PLUMBLINE_AWS_REGION=${region}
+PLUMBLINE_DDB_TABLE_DRIFTS=${drifts_table}
+PLUMBLINE_DDB_TABLE_SCANS=${scans_table}
+PLUMBLINE_DDB_TABLE_TIMELINE=${timeline_table}
+PLUMBLINE_DDB_TABLE_RECONCILIATIONS=${recon_table}
+PLUMBLINE_INGEST_HMAC_SECRET=$INGEST_SECRET
+PLUMBLINE_API_KEY=$API_KEY
+ENV
+chmod 600 "$APP_DIR/.env"
+
+useradd --system --no-create-home --shell /usr/sbin/nologin plumbline || true
+chown -R plumbline:plumbline /opt/plumbline
+
+cat > /etc/systemd/system/plumbline.service <<UNIT
+[Unit]
+Description=PlumbLine drift detection API
+After=network.target
+
+[Service]
+Type=simple
+User=plumbline
+WorkingDirectory=$APP_DIR
+EnvironmentFile=$APP_DIR/.env
+ExecStart=$APP_DIR/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now plumbline
