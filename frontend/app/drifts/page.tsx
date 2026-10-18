@@ -2,6 +2,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { listSummary, relativeTime } from "@/lib/format";
 import { SeverityBadge, StatusPill } from "@/components/Badges";
+import PageHeader from "@/components/PageHeader";
 import type { DriftStatus, Severity } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ const STATUSES: DriftStatus[] = [
   "SUPERSEDED",
 ];
 
-function FilterLink({
+function FilterChip({
   label,
   active,
   href,
@@ -34,10 +35,10 @@ function FilterLink({
   return (
     <Link
       href={href}
-      className={`rounded border px-2.5 py-1 text-xs transition-colors ${
+      className={`rounded-md px-2.5 py-1 text-[12px] font-medium transition-colors ${
         active
-          ? "border-sky-500 bg-sky-900/40 text-sky-300"
-          : "border-[#232c38] text-[#8b98a9] hover:border-[#3a4656] hover:text-white"
+          ? "bg-[#17202b] text-white"
+          : "text-[#5c6675] hover:bg-[#eef0f3] hover:text-[#17202b]"
       }`}
     >
       {label}
@@ -64,82 +65,95 @@ export default async function DriftsPage({
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Drift Events</h1>
-        <p className="mt-1 text-sm text-[#8b98a9]">
-          Every out-of-band change Terraform observed — the work queue.
-        </p>
-      </div>
+    <div>
+      <PageHeader
+        title="Drift events"
+        description="Every out-of-band change Terraform observed, as an incident."
+      />
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-wide text-[#8b98a9]">
+      {/* Filter bar */}
+      <div className="mb-5 flex flex-wrap items-center gap-x-8 gap-y-3">
+        <div className="flex items-center gap-1">
+          <span className="mr-1.5 text-[11px] font-medium uppercase tracking-wide text-[#8a94a3]">
             Severity
           </span>
-          <FilterLink label="All" active={!sev} href={hrefFor({ severity: undefined })} />
+          <FilterChip label="All" active={!sev} href={hrefFor({ severity: undefined })} />
           {SEVERITIES.map((s) => (
-            <FilterLink key={s} label={s} active={sev === s} href={hrefFor({ severity: s })} />
+            <FilterChip
+              key={s}
+              label={s.charAt(0) + s.slice(1).toLowerCase()}
+              active={sev === s}
+              href={hrefFor({ severity: s })}
+            />
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-wide text-[#8b98a9]">
+        <div className="flex items-center gap-1">
+          <span className="mr-1.5 text-[11px] font-medium uppercase tracking-wide text-[#8a94a3]">
             Status
           </span>
-          <FilterLink label="All" active={!status} href={hrefFor({ status: undefined })} />
+          <FilterChip label="All" active={!status} href={hrefFor({ status: undefined })} />
           {STATUSES.map((s) => (
-            <FilterLink key={s} label={s} active={status === s} href={hrefFor({ status: s })} />
+            <FilterChip
+              key={s}
+              label={s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, " ")}
+              active={status === s}
+              href={hrefFor({ status: s })}
+            />
           ))}
         </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-lg border border-[#232c38]">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-[#11161d] text-xs uppercase tracking-wide text-[#8b98a9]">
-            <tr>
-              <th className="px-4 py-3">Severity</th>
-              <th className="px-4 py-3">Resource</th>
-              <th className="px-4 py-3">What changed</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">First seen</th>
-              <th className="px-4 py-3">Scans</th>
+      <div className="overflow-hidden rounded-xl border border-[#e5e8ec] bg-white">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b border-[#eef0f3] text-[11px] font-medium uppercase tracking-wide text-[#8a94a3]">
+              <th className="px-5 py-3">Severity</th>
+              <th className="px-5 py-3">Resource</th>
+              <th className="px-5 py-3">What changed</th>
+              <th className="px-5 py-3">Status</th>
+              <th className="px-5 py-3">First seen</th>
+              <th className="px-5 py-3 text-right">Scans</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#232c38]">
+          <tbody className="divide-y divide-[#eef0f3]">
             {page.items.map((d) => (
-              <tr key={d.id} className="bg-[#0d1218] hover:bg-[#161d27]">
-                <td className="px-4 py-3">
+              <tr key={d.id} className="group transition-colors hover:bg-[#f8f9fb]">
+                <td className="px-5 py-3">
                   <SeverityBadge severity={d.severity} score={d.risk_score} />
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-5 py-3">
                   <Link
                     href={`/drifts/${d.id}`}
-                    className="mono text-sky-300 hover:underline"
+                    className="mono text-[13px] font-medium text-[#17202b] group-hover:text-[#2563eb]"
                   >
                     {d.resource_address}
                   </Link>
                 </td>
-                <td className="max-w-xs px-4 py-3 text-[#c9d4e0]">
+                <td className="max-w-[300px] truncate px-5 py-3 text-[13px] text-[#5c6675]">
                   {listSummary(d)}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-5 py-3">
                   <StatusPill status={d.status} />
                 </td>
-                <td className="px-4 py-3 text-[#8b98a9]">
+                <td className="px-5 py-3 text-[12px] text-[#8a94a3]">
                   {relativeTime(d.first_seen_at)}
                 </td>
-                <td className="px-4 py-3 text-[#8b98a9]">{d.scan_count}</td>
+                <td className="px-5 py-3 text-right text-[12px] text-[#8a94a3]">
+                  {d.scan_count}
+                </td>
               </tr>
             ))}
             {page.items.length === 0 && (
               <tr>
-                <td
-                  colSpan={6}
-                  className="px-4 py-10 text-center text-[#8b98a9]"
-                >
-                  No drift events match these filters.
+                <td colSpan={6} className="px-5 py-14 text-center">
+                  <p className="text-[13px] font-medium text-[#5c6675]">
+                    No drift events match
+                  </p>
+                  <p className="mt-1 text-[12px] text-[#8a94a3]">
+                    Try clearing the filters, or wait for the next scheduled
+                    scan.
+                  </p>
                 </td>
               </tr>
             )}

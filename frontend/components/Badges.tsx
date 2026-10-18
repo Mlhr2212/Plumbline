@@ -1,22 +1,20 @@
 import type { DriftStatus, Severity } from "@/lib/types";
 
-const SEVERITY_STYLES: Record<Severity, string> = {
-  CRITICAL: "bg-red-900/60 text-red-300 border-red-700",
-  HIGH: "bg-red-900/40 text-red-300 border-red-800",
-  MEDIUM: "bg-amber-900/40 text-amber-300 border-amber-800",
-  LOW: "bg-sky-900/40 text-sky-300 border-sky-800",
-  INFO: "bg-zinc-800 text-zinc-400 border-zinc-700",
+// Severity renders as a quiet colored dot + label — product convention,
+// not a loud badge. Score sits muted beside it.
+const SEVERITY_DOT: Record<Severity, string> = {
+  CRITICAL: "bg-red-600",
+  HIGH: "bg-red-500",
+  MEDIUM: "bg-amber-500",
+  LOW: "bg-sky-500",
+  INFO: "bg-zinc-400",
 };
-
-const STATUS_STYLES: Record<DriftStatus, string> = {
-  OPEN: "bg-red-900/40 text-red-300 border-red-800",
-  ACKNOWLEDGED: "bg-sky-900/40 text-sky-300 border-sky-800",
-  REMEDIATION_REQUESTED: "bg-violet-900/40 text-violet-300 border-violet-800",
-  RECONCILING: "bg-violet-900/40 text-violet-300 border-violet-800",
-  RESOLVED: "bg-emerald-900/40 text-emerald-300 border-emerald-800",
-  ACCEPTED: "bg-zinc-800 text-zinc-300 border-zinc-700",
-  IGNORED: "bg-zinc-800 text-zinc-400 border-zinc-700",
-  SUPERSEDED: "bg-zinc-800 text-zinc-500 border-zinc-700",
+const SEVERITY_TEXT: Record<Severity, string> = {
+  CRITICAL: "text-red-700",
+  HIGH: "text-red-600",
+  MEDIUM: "text-amber-700",
+  LOW: "text-sky-700",
+  INFO: "text-zinc-500",
 };
 
 export function SeverityBadge({
@@ -28,45 +26,66 @@ export function SeverityBadge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs font-semibold ${SEVERITY_STYLES[severity]}`}
+      className={`inline-flex items-center gap-1.5 text-[13px] font-medium ${SEVERITY_TEXT[severity]}`}
+      title={`Risk score ${score ?? "—"}/100`}
     >
-      {severity}
+      <span
+        className={`h-2 w-2 rounded-full ${SEVERITY_DOT[severity]}`}
+        aria-hidden
+      />
+      {severity.charAt(0) + severity.slice(1).toLowerCase()}
       {score !== undefined && (
-        <span className="font-normal opacity-80">{score}</span>
+        <span className="font-normal text-[#8a94a3]">{score}</span>
       )}
     </span>
   );
 }
 
+const STATUS_STYLES: Record<DriftStatus, { text: string; dot: string }> = {
+  OPEN: { text: "text-red-700", dot: "bg-red-500" },
+  ACKNOWLEDGED: { text: "text-sky-700", dot: "bg-sky-500" },
+  REMEDIATION_REQUESTED: { text: "text-violet-700", dot: "bg-violet-500" },
+  RECONCILING: { text: "text-violet-700", dot: "bg-violet-500" },
+  RESOLVED: { text: "text-emerald-700", dot: "bg-emerald-500" },
+  ACCEPTED: { text: "text-zinc-600", dot: "bg-zinc-400" },
+  IGNORED: { text: "text-zinc-500", dot: "bg-zinc-400" },
+  SUPERSEDED: { text: "text-zinc-400", dot: "bg-zinc-300" },
+};
+
 export function StatusPill({ status }: { status: DriftStatus }) {
+  const s = STATUS_STYLES[status];
   return (
     <span
-      className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border border-[#e5e8ec] bg-white px-2.5 py-0.5 text-xs font-medium ${s.text}`}
     >
-      {status.replace(/_/g, " ")}
+      <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+      {status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ")}
     </span>
   );
 }
 
 export function Card({
   title,
+  action,
   children,
   className = "",
 }: {
   title?: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <section
-      className={`rounded-lg border border-[#232c38] bg-[#11161d] ${className}`}
+      className={`rounded-xl border border-[#e5e8ec] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)] ${className}`}
     >
       {title && (
-        <h3 className="border-b border-[#232c38] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#8b98a9]">
-          {title}
-        </h3>
+        <div className="flex items-center justify-between border-b border-[#eef0f3] px-5 py-3">
+          <h3 className="text-[13px] font-semibold text-[#17202b]">{title}</h3>
+          {action}
+        </div>
       )}
-      <div className="p-4">{children}</div>
+      <div className="px-5 py-4">{children}</div>
     </section>
   );
 }

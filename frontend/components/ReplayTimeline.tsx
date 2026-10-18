@@ -1,10 +1,42 @@
 "use client";
 
 import { useState } from "react";
+import {
+  CheckCircle2,
+  CloudLightning,
+  FileSearch,
+  GitPullRequest,
+  PlayCircle,
+  Radar,
+  ScanLine,
+  ShieldCheck,
+  Wrench,
+  EyeOff,
+  Undo2,
+  CircleDashed,
+} from "lucide-react";
 import type { TimelineEvent } from "@/lib/types";
 import { shortTime } from "@/lib/format";
 
-// Events a human cares about in the story view; the rest collapse.
+const TYPE_ICON: Record<string, typeof Radar> = {
+  BASELINE_CONFIRMED: ShieldCheck,
+  CLOUD_CHANGE: CloudLightning,
+  CLOUDTRAIL_EVENT: FileSearch,
+  SCAN_STARTED: PlayCircle,
+  PLAN_GENERATED: ScanLine,
+  DRIFT_CONFIRMED: Radar,
+  RISK_CLASSIFIED: CircleDashed,
+  INVESTIGATION_STARTED: FileSearch,
+  REMEDIATION_PREVIEWED: CircleDashed,
+  PR_CREATED: GitPullRequest,
+  REMEDIATION_STARTED: Wrench,
+  REMEDIATION_COMPLETED: CheckCircle2,
+  DRIFT_ACCEPTED: Undo2,
+  DRIFT_IGNORED: EyeOff,
+  DRIFT_RESOLVED: CheckCircle2,
+};
+
+// The story beats a human cares about; the rest collapse.
 const HEADLINE_TYPES = new Set([
   "CLOUDTRAIL_EVENT",
   "CLOUD_CHANGE",
@@ -19,23 +51,6 @@ const HEADLINE_TYPES = new Set([
   "DRIFT_RESOLVED",
 ]);
 
-function CertaintyDot({ certainty }: { certainty: string }) {
-  if (certainty === "confirmed") {
-    // Solid filled dot = verified fact.
-    return (
-      <span className="flex h-4 w-4 items-center justify-center">
-        <span className="h-2.5 w-2.5 rounded-full bg-sky-400" />
-      </span>
-    );
-  }
-  // Hollow dashed-style dot = inferred — never presented as fact.
-  return (
-    <span className="flex h-4 w-4 items-center justify-center">
-      <span className="h-2.5 w-2.5 rounded-full border-2 border-dashed border-amber-400" />
-    </span>
-  );
-}
-
 export default function ReplayTimeline({
   events,
 }: {
@@ -48,64 +63,87 @@ export default function ReplayTimeline({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-xs text-[#8b98a9]">
-          <span className="mr-4">
-            <span className="mr-1 inline-block h-2 w-2 rounded-full bg-sky-400 align-middle" />
-            confirmed fact
+      <div className="mb-5 flex items-center justify-between">
+        <div className="flex items-center gap-4 text-[11px] text-[#8a94a3]">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#2563eb]" /> confirmed
           </span>
-          <span>
-            <span className="mr-1 inline-block h-2 w-2 rounded-full border border-dashed border-amber-400 align-middle" />
-            inferred estimate
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full border border-dashed border-amber-500" />
+            inferred
           </span>
-        </p>
+        </div>
         {hidden > 0 && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-xs text-sky-400 hover:underline"
+            className="text-[12px] font-medium text-[#2563eb] hover:underline"
           >
-            {expanded ? "Show fewer" : `Show ${hidden} technical events`}
+            {expanded
+              ? "Show fewer"
+              : `Show ${hidden} technical event${hidden === 1 ? "" : "s"}`}
           </button>
         )}
       </div>
 
-      <ol className="relative border-l-2 border-[#2a3542] pl-6">
+      <ol className="relative space-y-0">
         {shown.map((e, i) => {
           const confirmed = e.certainty === "confirmed";
+          const Icon = TYPE_ICON[e.type] ?? CircleDashed;
+          const last = i === shown.length - 1;
           return (
-            <li key={i} className="relative pb-6 last:pb-0">
-              <span className="absolute -left-[31px] top-1">
-                <CertaintyDot certainty={e.certainty} />
+            <li key={i} className="relative flex gap-4">
+              {/* connector line */}
+              {!last && (
+                <span
+                  className={`absolute left-[15px] top-9 h-[calc(100%-28px)] w-px ${
+                    confirmed ? "bg-[#e5e8ec]" : "border-l border-dashed border-[#e5e8ec]"
+                  }`}
+                  aria-hidden
+                />
+              )}
+              {/* marker */}
+              <span
+                className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
+                  confirmed
+                    ? "border-[#c7d7fb] bg-[#eff4ff] text-[#2563eb]"
+                    : "border-dashed border-amber-300 bg-amber-50 text-amber-600"
+                }`}
+              >
+                <Icon size={14} strokeWidth={1.9} />
               </span>
-              <div className={confirmed ? "" : "opacity-70"}>
+              <div className={`min-w-0 flex-1 pb-7 ${confirmed ? "" : "opacity-80"}`}>
                 <div className="flex flex-wrap items-baseline gap-x-3">
                   <span
-                    className={`mono text-xs ${
-                      confirmed ? "text-sky-300" : "text-amber-300"
+                    className={`mono text-[11px] ${
+                      confirmed ? "text-[#8a94a3]" : "text-amber-600"
                     }`}
                   >
-                    {confirmed ? shortTime(e.timestamp) : `~${shortTime(e.timestamp)}`}
+                    {confirmed
+                      ? shortTime(e.timestamp)
+                      : `~${shortTime(e.timestamp)}`}
                   </span>
-                  <span className="text-sm font-medium">{e.title}</span>
+                  <span className="text-[13px] font-medium text-[#17202b]">
+                    {e.title}
+                  </span>
                   {!confirmed && (
-                    <span className="rounded border border-amber-800 bg-amber-900/30 px-1.5 py-0.5 text-[10px] uppercase text-amber-300">
+                    <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700">
                       inferred
                     </span>
                   )}
-                  {e.confidence !== null && e.confidence !== undefined && (
-                    <span className="text-[10px] text-[#8b98a9]">
-                      confidence {Math.round(e.confidence * 100)}%
+                  {e.confidence != null && (
+                    <span className="text-[11px] text-[#8a94a3]">
+                      {Math.round(e.confidence * 100)}% confident
                     </span>
                   )}
                 </div>
                 {e.description && (
-                  <p className="mt-1 text-xs leading-relaxed text-[#8b98a9]">
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-[#5c6675]">
                     {e.description}
                   </p>
                 )}
                 {(typeof e.metadata?.actor === "string" ||
                   typeof e.metadata?.pr_url === "string") && (
-                  <p className="mono mt-1 text-[11px] text-[#5f6f82]">
+                  <p className="mono mt-1 text-[11px] text-[#8a94a3]">
                     {typeof e.metadata.actor === "string"
                       ? e.metadata.actor
                       : ""}
@@ -119,7 +157,7 @@ export default function ReplayTimeline({
           );
         })}
         {shown.length === 0 && (
-          <li className="text-sm text-[#8b98a9]">No timeline events yet.</li>
+          <li className="text-[13px] text-[#8a94a3]">No timeline events yet.</li>
         )}
       </ol>
     </div>

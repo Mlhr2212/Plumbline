@@ -1,3 +1,4 @@
+import { UserRound, CircleHelp } from "lucide-react";
 import type { Attribution } from "@/lib/types";
 import { shortTime } from "@/lib/format";
 import { Card } from "./Badges";
@@ -13,9 +14,12 @@ export default function AttributionCard({
   if (status === "disabled" || attribution.source === "none") {
     return (
       <Card title="Who did it">
-        <p className="text-sm text-[#8b98a9]">
-          CloudTrail attribution is disabled for this environment.
-        </p>
+        <div className="flex gap-3">
+          <CircleHelp size={18} className="shrink-0 text-[#8a94a3]" />
+          <p className="text-[13px] text-[#5c6675]">
+            CloudTrail attribution is disabled for this environment.
+          </p>
+        </div>
       </Card>
     );
   }
@@ -23,15 +27,13 @@ export default function AttributionCard({
   if (!actor || status === "unknown") {
     return (
       <Card title="Who did it">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 text-sm">
-            ?
-          </span>
+        <div className="flex gap-3">
+          <CircleHelp size={18} className="shrink-0 text-amber-500" />
           <div>
-            <p className="text-sm font-medium text-zinc-300">Actor unknown</p>
-            <p className="text-xs text-[#8b98a9]">
+            <p className="text-[13px] font-medium">Actor unknown</p>
+            <p className="mt-0.5 text-[12px] leading-relaxed text-[#8a94a3]">
               CloudTrail found no matching mutating event in the lookback
-              window — reported honestly, not guessed.
+              window. Reported honestly — never guessed.
             </p>
           </div>
         </div>
@@ -39,35 +41,56 @@ export default function AttributionCard({
     );
   }
 
+  const actorShort = actor.split("/").pop() ?? actor;
+
   return (
     <Card title="Who did it">
-      <div className="space-y-2">
-        <p className="mono break-all text-sm font-medium text-sky-300">
-          {actor}
-        </p>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-          <dt className="text-[#8b98a9]">Action</dt>
-          <dd className="mono">{event_name ?? "—"}</dd>
-          <dt className="text-[#8b98a9]">When</dt>
-          <dd>{event_time ? shortTime(event_time) : "—"}</dd>
-          <dt className="text-[#8b98a9]">Source IP</dt>
-          <dd className="mono">{source_ip ?? "—"}</dd>
-          <dt className="text-[#8b98a9]">Confidence</dt>
-          <dd>
+      <div className="flex gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#eff4ff] text-[#2563eb]">
+          <UserRound size={16} />
+        </span>
+        <div className="min-w-0">
+          <p className="mono truncate text-[13px] font-semibold text-[#17202b]">
+            {actorShort}
+          </p>
+          <p className="mono mt-0.5 break-all text-[11px] text-[#8a94a3]">
+            {actor}
+          </p>
+        </div>
+      </div>
+      <dl className="mt-4 space-y-1.5 text-[12px]">
+        {[
+          ["Action", <span key="a" className="mono">{event_name ?? "—"}</span>],
+          ["When", event_time ? shortTime(event_time) : "—"],
+          ["Source IP", <span key="i" className="mono">{source_ip ?? "—"}</span>],
+          [
+            "Confidence",
             <span
+              key="c"
               className={
                 confidence >= 0.8
-                  ? "text-emerald-400"
+                  ? "font-medium text-emerald-700"
                   : confidence >= 0.5
-                    ? "text-amber-400"
-                    : "text-red-400"
+                    ? "font-medium text-amber-700"
+                    : "font-medium text-red-600"
               }
             >
               {Math.round(confidence * 100)}%
-            </span>
-          </dd>
-        </dl>
-      </div>
+            </span>,
+          ],
+        ].map(([k, v], i) => (
+          <div key={i} className="flex justify-between gap-3">
+            <dt className="text-[#8a94a3]">{k}</dt>
+            <dd className="text-right text-[#17202b]">{v}</dd>
+          </div>
+        ))}
+      </dl>
+      {attribution.candidates.length > 1 && (
+        <p className="mt-3 border-t border-[#eef0f3] pt-2 text-[11px] text-[#8a94a3]">
+          {attribution.candidates.length - 1} other candidate event
+          {attribution.candidates.length - 1 === 1 ? "" : "s"} in window
+        </p>
+      )}
     </Card>
   );
 }

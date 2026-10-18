@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import type { RemediationPreview } from "@/lib/types";
 import { Card, SeverityBadge } from "./Badges";
 
@@ -9,56 +10,65 @@ export default function RemediationCard({
   const p = preview;
   return (
     <Card title="Remediation preview">
-      <div className="space-y-3 text-sm">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px]">
           <div>
-            <span className="text-[#8b98a9]">Terraform would: </span>
-            <span className="mono font-medium">
+            <span className="text-[#8a94a3]">Terraform would </span>
+            <span className="mono font-medium text-[#17202b]">
               {p.terraform_actions.length > 0
                 ? p.terraform_actions.join(" + ")
-                : "no planned action"}
+                : "take no planned action"}
             </span>
           </div>
-          <div>
-            <span className="text-[#8b98a9]">Risk: </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#8a94a3]">Risk</span>
             <SeverityBadge severity={p.risk_before} />
-            <span className="mx-1 text-[#8b98a9]">→</span>
+            <ArrowRight size={12} className="text-[#8a94a3]" />
             <SeverityBadge severity={p.risk_after} />
           </div>
         </div>
 
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs md:grid-cols-4">
-          <div>
-            <dt className="text-[#8b98a9]">Modified</dt>
-            <dd className="text-lg font-semibold">{p.resources_modified}</dd>
-          </div>
-          <div>
-            <dt className="text-[#8b98a9]">Replaced</dt>
-            <dd className="text-lg font-semibold">{p.resources_replaced}</dd>
-          </div>
-          <div>
-            <dt className="text-[#8b98a9]">Dependents</dt>
-            <dd className="text-lg font-semibold">{p.known_dependents}</dd>
-          </div>
-          <div>
-            <dt className="text-[#8b98a9]">Downtime</dt>
-            <dd className="text-lg font-semibold">
+        <div className="grid grid-cols-4 gap-3">
+          {[
+            ["Modified", p.resources_modified],
+            ["Replaced", p.resources_replaced],
+            ["Dependents", p.known_dependents],
+          ].map(([label, v]) => (
+            <div
+              key={label as string}
+              className="rounded-lg border border-[#eef0f3] bg-[#f8f9fb] px-3 py-2 text-center"
+            >
+              <div className="text-lg font-semibold">{v}</div>
+              <div className="text-[10px] uppercase tracking-wide text-[#8a94a3]">
+                {label}
+              </div>
+            </div>
+          ))}
+          <div className="rounded-lg border border-[#eef0f3] bg-[#f8f9fb] px-3 py-2 text-center">
+            <div className="text-lg font-semibold">
               {p.downtime_expected ? (
-                <span className="text-amber-400">possible</span>
+                <span className="text-amber-600">Possible</span>
               ) : (
-                <span className="text-emerald-400">none detected*</span>
+                <span className="text-emerald-600">None*</span>
               )}
-            </dd>
+            </div>
+            <div className="text-[10px] uppercase tracking-wide text-[#8a94a3]">
+              Downtime
+            </div>
           </div>
-        </dl>
+        </div>
 
-        <ul className="space-y-1 border-t border-[#232c38] pt-3 text-xs text-[#8b98a9]">
+        <ul className="space-y-1 text-[12px] text-[#5c6675]">
           {p.reasons.map((r, i) => (
-            <li key={i}>· {r}</li>
+            <li key={i} className="flex gap-2">
+              <span className="text-[#c3cad4]">—</span>
+              {r}
+            </li>
           ))}
         </ul>
-        <p className="text-[10px] text-[#5f6f82]">
-          Confidence {Math.round(p.confidence * 100)}% · *no downtime-inducing
+
+        <p className="border-t border-[#eef0f3] pt-3 text-[11px] text-[#8a94a3]">
+          Confidence {Math.round(p.confidence * 100)}% · *No downtime-inducing
           actions detected — not a guarantee of zero downtime.
         </p>
       </div>

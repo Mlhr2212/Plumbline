@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { ArrowRight, CheckCircle2, ShieldAlert } from "lucide-react";
 import { api } from "@/lib/api";
-import { relativeTime } from "@/lib/format";
-import { Card, SeverityBadge } from "@/components/Badges";
+import { listSummary, relativeTime } from "@/lib/format";
+import { Card, SeverityBadge, StatusPill } from "@/components/Badges";
+import PageHeader from "@/components/PageHeader";
 import type { Severity } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -13,125 +15,153 @@ const SEVERITY_ORDER: Severity[] = [
   "LOW",
   "INFO",
 ];
+const ACTIVE_STATUSES = new Set([
+  "OPEN",
+  "ACKNOWLEDGED",
+  "REMEDIATION_REQUESTED",
+  "RECONCILING",
+]);
 
 export default async function OverviewPage() {
   const [overview, drifts] = await Promise.all([
     api.overview(),
     api.drifts({ limit: "50" }),
   ]);
-  const open = drifts.items.filter(
-    (d) =>
-      d.status === "OPEN" ||
-      d.status === "ACKNOWLEDGED" ||
-      d.status === "REMEDIATION_REQUESTED" ||
-      d.status === "RECONCILING",
-  );
+  const open = drifts.items.filter((d) => ACTIVE_STATUSES.has(d.status));
+  const healthy = overview.active_drift === 0;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Overview</h1>
-        <p className="mt-1 text-sm text-[#8b98a9]">
-          Is anything wrong? This page answers that in two seconds.
-        </p>
-      </div>
+      <PageHeader
+        title="Overview"
+        description="Drift detection for your Terraform-managed sandbox."
+      />
 
-      {/* Headline stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Card className="text-center">
-          <div
-            className={`text-3xl font-bold ${
-              overview.active_drift > 0 ? "text-red-400" : "text-emerald-400"
+      {/* Status banner — the 2-second answer */}
+      <div
+        className={`flex items-center gap-3 rounded-xl border px-5 py-4 ${
+          healthy
+            ? "border-emerald-200 bg-emerald-50"
+            : "border-red-200 bg-red-50"
+        }`}
+      >
+        {healthy ? (
+          <CheckCircle2 size={20} className="shrink-0 text-emerald-600" />
+        ) : (
+          <ShieldAlert size={20} className="shrink-0 text-red-600" />
+        )}
+        <div>
+          <p
+            className={`text-[14px] font-semibold ${
+              healthy ? "text-emerald-800" : "text-red-800"
             }`}
           >
-            {overview.active_drift}
-          </div>
-          <div className="mt-1 text-xs uppercase tracking-wide text-[#8b98a9]">
-            Active drift
-          </div>
-        </Card>
-        <Card className="text-center">
-          <div className="text-3xl font-bold">
-            {overview.total_drift_events}
-          </div>
-          <div className="mt-1 text-xs uppercase tracking-wide text-[#8b98a9]">
-            Total events
-          </div>
-        </Card>
-        <Card className="text-center">
-          <div className="text-3xl font-bold">
-            {overview.by_status["RESOLVED"] ?? 0}
-          </div>
-          <div className="mt-1 text-xs uppercase tracking-wide text-[#8b98a9]">
-            Resolved
-          </div>
-        </Card>
-        <Card className="text-center">
-          <div className="text-lg font-semibold">
-            {overview.last_scan ? (
-              <span
-                className={
-                  overview.last_scan.status === "COMPLETED"
-                    ? "text-emerald-400"
-                    : overview.last_scan.status === "FAILED"
-                      ? "text-red-400"
-                      : "text-amber-400"
-                }
-              >
-                {overview.last_scan.status}
-              </span>
-            ) : (
-              "—"
-            )}
-          </div>
-          <div className="mt-1 text-xs uppercase tracking-wide text-[#8b98a9]">
-            Last scan{" "}
-            {overview.last_scan?.completed_at
-              ? `· ${relativeTime(overview.last_scan.completed_at)}`
-              : ""}
-          </div>
-        </Card>
+            {healthy
+              ? "Infrastructure matches your Terraform configuration"
+              : `${overview.active_drift} active drift event${overview.active_drift === 1 ? "" : "s"} need${overview.active_drift === 1 ? "s" : ""} attention`}
+          </p>
+          <p
+            className={`text-[12px] ${
+              healthy ? "text-emerald-600" : "text-red-600"
+            }`}
+          >
+            {overview.last_scan
+              ? `Last scan ${relativeTime(overview.last_scan.completed_at)} — ${overview.last_scan.drift_detected} detected, ${overview.last_scan.drift_resolved} resolved`
+              : "No scans recorded yet"}
+          </p>
+        </div>
+        {!healthy && (
+          <Link
+            href="/drifts"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-[#17202b] px-3 py-1.5 text-[12px] font-medium text-white hover:bg-[#2a3542]"
+          >
+            Review <ArrowRight size={13} />
+          </Link>
+        )}
       </div>
 
-      {/* Severity breakdown */}
-      <Card title="Drift by severity">
-        <div className="flex flex-wrap items-center gap-3">
+      {/* Quiet stat row */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {[
+          {
+            label: "Active drift",
+            value: overview.active_drift,
+            tone: overview.active_drift > 0 ? "text-red-600" : "",
+          },
+          { label: "Total events", value: overview.total_drift_events },
+          {
+            label: "Resolved",
+            value: overview.by_status["RESOLVED"] ?? 0,
+          },
+          {
+            label: "Last scan",
+            value: overview.last_scan
+              ? relativeTime(overview.last_scan.completed_at)
+              : "—",
+          },
+        ].map((s) => (
+          <Card key={s.label}>
+            <div className={`text-2xl font-semibold tracking-tight ${s.tone ?? ""}`}>
+              {s.value}
+            </div>
+            <div className="mt-0.5 text-[12px] text-[#8a94a3]">{s.label}</div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Severity mix */}
+      <Card title="Severity mix">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 py-1">
           {SEVERITY_ORDER.filter((s) => overview.by_severity[s]).map((s) => (
             <div key={s} className="flex items-center gap-2">
               <SeverityBadge severity={s} />
-              <span className="text-lg font-semibold">
+              <span className="text-[13px] font-semibold text-[#5c6675]">
                 ×{overview.by_severity[s]}
               </span>
             </div>
           ))}
           {Object.keys(overview.by_severity).length === 0 && (
-            <span className="text-sm text-[#8b98a9]">
-              No drift events recorded yet.
+            <span className="text-[13px] text-[#8a94a3]">
+              Nothing recorded yet — run a scan to populate this.
             </span>
           )}
         </div>
       </Card>
 
       {/* Open incidents */}
-      <Card title="Open incidents">
+      <Card
+        title="Open incidents"
+        action={
+          <Link
+            href="/drifts"
+            className="text-[12px] font-medium text-[#2563eb] hover:underline"
+          >
+            View all
+          </Link>
+        }
+      >
         {open.length === 0 ? (
-          <p className="py-4 text-center text-sm text-[#8b98a9]">
-            No open drift — infrastructure matches Terraform.{" "}
-            <span className="text-emerald-400">All clear.</span>
+          <p className="py-3 text-[13px] text-[#8a94a3]">
+            No open drift. When something changes out-of-band, it will appear
+            here with who did it and what fixing it looks like.
           </p>
         ) : (
-          <ul className="divide-y divide-[#232c38]">
+          <ul className="-mx-5 divide-y divide-[#eef0f3]">
             {open.map((d) => (
               <li key={d.id}>
                 <Link
                   href={`/drifts/${d.id}`}
-                  className="flex items-center gap-4 py-3 hover:bg-[#161d27] -mx-4 px-4 transition-colors"
+                  className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-[#f8f9fb]"
                 >
                   <SeverityBadge severity={d.severity} score={d.risk_score} />
-                  <span className="mono text-sm">{d.resource_address}</span>
-                  <span className="ml-auto text-xs text-[#8b98a9]">
-                    {relativeTime(d.first_seen_at)} · {d.scan_count} scan
-                    {d.scan_count === 1 ? "" : "s"}
+                  <span className="mono min-w-0 flex-1 truncate text-[13px]">
+                    {d.resource_address}
+                  </span>
+                  <span className="hidden max-w-[280px] truncate text-[12px] text-[#5c6675] md:block">
+                    {listSummary(d)}
+                  </span>
+                  <span className="shrink-0 text-[12px] text-[#8a94a3]">
+                    {relativeTime(d.first_seen_at)}
                   </span>
                 </Link>
               </li>
