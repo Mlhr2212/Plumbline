@@ -127,3 +127,13 @@ resource "aws_instance" "api" {
 
   tags = merge(var.tags, { Name = "${var.name_prefix}-api" })
 }
+
+# Stable public endpoint — instance replacements (the designed deploy
+# mechanism) rotate the auto-assigned IP; the Elastic IP re-associates and
+# keeps api_url / frontend_url constant.
+resource "aws_eip" "api" {
+  instance = aws_instance.api.id
+  domain   = "vpc"
+
+  tags = merge(var.tags, { Name = "${var.name_prefix}-api" })
+}

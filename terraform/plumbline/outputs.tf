@@ -21,16 +21,16 @@ output "tfstate_bucket" {
 
 output "api_url" {
   description = "Set as the PLUMBLINE_API_URL GitHub variable."
-  value       = "http://${aws_instance.api.public_ip}:8000"
+  value       = "http://${aws_eip.api.public_ip}:8000"
 }
 
 output "api_public_ip" {
-  value = aws_instance.api.public_ip
+  value = aws_eip.api.public_ip
 }
 
 output "frontend_url" {
   description = "Public URL of the hosted UI."
-  value       = "http://${aws_instance.api.public_ip}:3000"
+  value       = "http://${aws_eip.api.public_ip}:3000"
 }
 
 output "dynamodb_tables" {
