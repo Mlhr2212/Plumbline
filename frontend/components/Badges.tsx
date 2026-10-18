@@ -1,21 +1,27 @@
 import type { DriftStatus, Severity } from "@/lib/types";
 
-// Severity renders as a quiet colored dot + label — product convention,
-// not a loud badge. Score sits muted beside it.
+// Severity = colored dot + word. Never color alone, never a loud badge.
 const SEVERITY_DOT: Record<Severity, string> = {
-  CRITICAL: "bg-red-600",
-  HIGH: "bg-red-500",
-  MEDIUM: "bg-amber-500",
-  LOW: "bg-sky-500",
-  INFO: "bg-zinc-400",
+  CRITICAL: "bg-critical",
+  HIGH: "bg-high",
+  MEDIUM: "bg-medium",
+  LOW: "bg-low",
+  INFO: "bg-info",
 };
 const SEVERITY_TEXT: Record<Severity, string> = {
-  CRITICAL: "text-red-700",
-  HIGH: "text-red-600",
-  MEDIUM: "text-amber-700",
-  LOW: "text-sky-700",
-  INFO: "text-zinc-500",
+  CRITICAL: "text-critical",
+  HIGH: "text-high",
+  MEDIUM: "text-medium",
+  LOW: "text-low",
+  INFO: "text-info",
 };
+
+export function severityDot(sev: Severity) {
+  return SEVERITY_DOT[sev];
+}
+export function severityText(sev: Severity) {
+  return SEVERITY_TEXT[sev];
+}
 
 export function SeverityBadge({
   severity,
@@ -27,7 +33,7 @@ export function SeverityBadge({
   return (
     <span
       className={`inline-flex items-center gap-1.5 text-[13px] font-medium ${SEVERITY_TEXT[severity]}`}
-      title={`Risk score ${score ?? "—"}/100`}
+      title={score !== undefined ? `Risk score ${score}/100` : undefined}
     >
       <span
         className={`h-2 w-2 rounded-full ${SEVERITY_DOT[severity]}`}
@@ -35,57 +41,70 @@ export function SeverityBadge({
       />
       {severity.charAt(0) + severity.slice(1).toLowerCase()}
       {score !== undefined && (
-        <span className="font-normal text-[#8a94a3]">{score}</span>
+        <span className="font-normal text-faint">{score}</span>
       )}
     </span>
   );
 }
 
 const STATUS_STYLES: Record<DriftStatus, { text: string; dot: string }> = {
-  OPEN: { text: "text-red-700", dot: "bg-red-500" },
-  ACKNOWLEDGED: { text: "text-sky-700", dot: "bg-sky-500" },
-  REMEDIATION_REQUESTED: { text: "text-violet-700", dot: "bg-violet-500" },
-  RECONCILING: { text: "text-violet-700", dot: "bg-violet-500" },
-  RESOLVED: { text: "text-emerald-700", dot: "bg-emerald-500" },
-  ACCEPTED: { text: "text-zinc-600", dot: "bg-zinc-400" },
-  IGNORED: { text: "text-zinc-500", dot: "bg-zinc-400" },
-  SUPERSEDED: { text: "text-zinc-400", dot: "bg-zinc-300" },
+  OPEN: { text: "text-critical", dot: "bg-critical" },
+  ACKNOWLEDGED: { text: "text-low", dot: "bg-low" },
+  REMEDIATION_REQUESTED: { text: "text-reconcile", dot: "bg-reconcile" },
+  RECONCILING: { text: "text-reconcile", dot: "bg-reconcile" },
+  RESOLVED: { text: "text-resolved", dot: "bg-resolved" },
+  ACCEPTED: { text: "text-muted", dot: "bg-muted" },
+  IGNORED: { text: "text-faint", dot: "bg-faint" },
+  SUPERSEDED: { text: "text-faint", dot: "bg-border-strong" },
 };
 
+export function statusLabel(status: string) {
+  return status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ");
+}
+
 export function StatusPill({ status }: { status: DriftStatus }) {
-  const s = STATUS_STYLES[status];
+  const s = STATUS_STYLES[status] ?? {
+    text: "text-muted",
+    dot: "bg-muted",
+  };
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border border-[#e5e8ec] bg-white px-2.5 py-0.5 text-xs font-medium ${s.text}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border border-border bg-panel px-2 py-0.5 text-[11px] font-medium ${s.text}`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-      {status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ")}
+      <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} aria-hidden />
+      {statusLabel(status)}
     </span>
   );
 }
 
-export function Card({
+// Section — a bordered surface, not a decorative card. Titles are quiet,
+// uppercase micro-labels like GitHub/Datadog section headers.
+export function Section({
   title,
   action,
   children,
   className = "",
+  padded = true,
 }: {
-  title?: string;
+  title?: React.ReactNode;
   action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  padded?: boolean;
 }) {
   return (
     <section
-      className={`rounded-xl border border-[#e5e8ec] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)] ${className}`}
+      className={`overflow-hidden rounded-md border border-border bg-panel ${className}`}
     >
-      {title && (
-        <div className="flex items-center justify-between border-b border-[#eef0f3] px-5 py-3">
-          <h3 className="text-[13px] font-semibold text-[#17202b]">{title}</h3>
+      {(title || action) && (
+        <header className="flex items-center justify-between border-b border-border px-4 py-2.5">
+          <h3 className="text-[11px] font-medium uppercase tracking-widest text-muted">
+            {title}
+          </h3>
           {action}
-        </div>
+        </header>
       )}
-      <div className="px-5 py-4">{children}</div>
+      <div className={padded ? "px-4 py-3" : ""}>{children}</div>
     </section>
   );
 }

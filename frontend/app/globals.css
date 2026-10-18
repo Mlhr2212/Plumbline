@@ -1,16 +1,50 @@
 @import "tailwindcss";
 
-:root {
-  --bg: #f7f8fa;
-  --panel: #ffffff;
-  --border: #e5e8ec;
-  --border-strong: #d8dde3;
-  --text: #17202b;
-  --muted: #5c6675;
-  --faint: #8a94a3;
-  --accent: #2563eb;
-  --accent-soft: #eff4ff;
-  --accent-border: #c7d7fb;
+/* ─────────────────────────────────────────────────────────────
+   PlumbLine design tokens — dark-first.
+   Layered surfaces: app < nav < panel < elevated.
+   Color carries meaning; severity colors are deliberately rare.
+   A light theme can be layered on by overriding these custom
+   properties under [data-theme="light"] — all components
+   reference tokens, never raw hex.
+   ───────────────────────────────────────────────────────────── */
+@theme {
+  /* surfaces */
+  --color-bg: #0b0e12;
+  --color-nav: #0e1218;
+  --color-panel: #12161d;
+  --color-elevated: #181e28;
+  --color-hover: #1d2530;
+  --color-selected: #1b2531;
+
+  /* borders */
+  --color-border: #212935;
+  --color-border-strong: #2c3847;
+
+  /* text */
+  --color-text: #dde3ea;
+  --color-muted: #8b96a5;
+  --color-faint: #5d6776;
+
+  /* accent — used sparingly: links, focus, primary action */
+  --color-accent: #5b8df5;
+  --color-accent-soft: #1a2740;
+  --color-accent-border: #2d4a8a;
+
+  /* semantic — severity & status */
+  --color-critical: #f05b52;
+  --color-high: #ed8245;
+  --color-medium: #d9a838;
+  --color-low: #5b9cf5;
+  --color-info: #7d8896;
+  --color-healthy: #40b183;
+  --color-unknown: #6b7686;
+  --color-resolved: #40b183;
+  --color-reconcile: #9d7de8;
+
+  /* font */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 html {
@@ -19,29 +53,60 @@ html {
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .mono {
-  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-feature-settings: "ss01";
 }
 
 ::selection {
-  background: #dbe7fd;
+  background: #2d4a8a66;
 }
 
-/* Subtle scrollbar */
+/* focus ring — visible, consistent, one place */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4d9e0;
+  background: #2c3847;
   border-radius: 5px;
-  border: 2px solid var(--bg);
+  border: 2px solid var(--color-bg);
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* kbd hint — command palette affordance */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border-strong);
+  border-bottom-width: 2px;
+  background: var(--color-elevated);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--color-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

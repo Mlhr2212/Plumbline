@@ -1,9 +1,19 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
+import AppShell from "@/components/AppShell";
+import { api } from "@/lib/api";
 
-const inter = Inter({ subsets: ["latin"], display: "swap" });
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
+const jbmono = JetBrains_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-jbmono",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -13,20 +23,21 @@ export const metadata: Metadata = {
   description: "AWS/Terraform infrastructure drift detection and investigation",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [health, overview] = await Promise.all([
+    api.health().catch(() => null),
+    api.overview().catch(() => null),
+  ]);
   return (
-    <html lang="en" className={inter.className}>
-      <body className="min-h-screen">
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <main className="min-w-0 flex-1">
-            <div className="mx-auto max-w-[1080px] px-8 py-8">{children}</div>
-          </main>
-        </div>
+    <html lang="en" className={`${inter.variable} ${jbmono.variable}`}>
+      <body className="min-h-screen font-sans text-[13px] leading-normal">
+        <AppShell overview={overview} apiOk={health?.status === "ok"}>
+          {children}
+        </AppShell>
       </body>
     </html>
   );

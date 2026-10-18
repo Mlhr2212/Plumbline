@@ -5,6 +5,7 @@ import type {
   DriftEvent,
   Overview,
   Page,
+  ReconciliationProposal,
   RemediationPreview,
   Scan,
   TimelineEvent,
@@ -47,6 +48,7 @@ export async function postAction(
 }
 
 export const api = {
+  health: () => get<{ status: string; service: string; version: string }>("/api/v1/health"),
   overview: () => get<Overview>("/api/v1/overview"),
   drifts: (params: Record<string, string | undefined>) => {
     const q = new URLSearchParams();
@@ -61,5 +63,8 @@ export const api = {
     get<DependencySummary>(`/api/v1/drifts/${id}/dependencies`),
   remediationPreview: (id: string) =>
     get<RemediationPreview>(`/api/v1/drifts/${id}/remediation-preview`),
-  scans: () => get<Page<Scan>>("/api/v1/scans?limit=20"),
+  scans: () => get<Page<Scan>>("/api/v1/scans?limit=50"),
+  scan: (id: string) => get<Scan>(`/api/v1/scans/${id}`),
+  reconciliations: () =>
+    get<Page<ReconciliationProposal>>("/api/v1/reconciliations?limit=50"),
 };
