@@ -1,39 +1,40 @@
 # PlumbLine Frontend
 
-Next.js (App Router) + Tailwind UI for the PlumbLine drift-detection platform,
-built against the backend contract in `backend/` (see the root README for the
-endpoint list).
+Investigation UI for the PlumbLine drift platform. Next.js 15 (App Router) +
+TypeScript + Tailwind v4. Dark-first "operational control plane" — dense,
+quiet, evidence-driven.
 
-## What it shows
-
-- **Overview** (`/`) — active drift count, severity breakdown, last-scan
-  status, open incidents.
-- **Drift Events** (`/drifts`) — filterable table (severity, status) with a
-  generated plain-English summary per row.
-- **Drift detail** (`/drifts/:id`) — the investigation page: plain-English
-  summary, "who did it" CloudTrail attribution card, attribute diffs, known
-  dependency impact, risk-factor breakdown, **Drift Replay** timeline, and
-  Remediation Preview with lifecycle actions.
-- **Scans** (`/scans`) — ingest audit trail.
-
-### UI semantics
-
-- Confirmed timeline events render as solid markers; **inferred** events are
-  dashed/faded and marked `inferred` — the UI never presents inference as fact.
-- "Known Dependency Impact" is labeled as Terraform-reference-derived only.
-- Mutation endpoints (`reconcile`, `accept`, `ignore`, `acknowledge`) are
-  proxied through `app/api/drifts/[id]/[action]/route.ts`, which attaches
-  `x-api-key` server-side — the API key never reaches the browser.
-
-## Run it
+## Run
 
 ```bash
-cp .env.example .env.local   # set PLUMBLINE_API_URL (+ PLUMBLINE_API_KEY for actions)
+cp .env.example .env.local   # set PLUMBLINE_API_URL + PLUMBLINE_API_KEY
 npm install
-npm run dev                  # http://localhost:3000
+npm run dev                  # dev on :3000
+npm run build && npm start   # production
 ```
 
-| Env var | Purpose |
+The API key is only ever attached server-side (route handlers in `app/api/`),
+never shipped to the browser.
+
+## Map
+
+| Route | Purpose |
 |---|---|
-| `PLUMBLINE_API_URL` | Backend base URL (default `http://localhost:8000`) |
-| `PLUMBLINE_API_KEY` | Required only for drift lifecycle actions (reconcile/accept/ignore/acknowledge) |
+| `/` | Health banner → "Needs attention" → derived drift health → secondary panels |
+| `/drifts` | Drift Explorer — filter bar, sortable/dense table, right-side row inspector |
+| `/drifts/[id]` | Flagship incident workspace: selectable Drift Replay → evidence inspector, specialized SG/IAM diffs, explainable risk, attribution confidence, remediation slide-over |
+| `/timeline` | Global infrastructure event feed (composed from scans + drift lifecycle) |
+| `/scans`, `/scans/[id]` | Ingest audit trail + scan metadata |
+| `/reconciliations` | Reviewable reconciliation proposals + PR links |
+| `/infrastructure` | Resources observed through plans (explicitly not a full inventory) |
+| `/settings` | Connection/env info + keyboard reference |
+
+## Conventions
+
+- **⌘K** opens the command palette (lazy search index via `/api/search-index`).
+- Server components fetch data; client components handle interaction.
+- Severity = colored dot + word (never color alone); inferred timeline events
+  render dashed/faded vs. solid confirmed.
+- All decisions (drift, risk, confidence, eligibility) come from the backend —
+  the UI displays, filters, navigates, and requests actions.
+- Tokens in `app/globals.css` `@theme` — light mode is a token override away.

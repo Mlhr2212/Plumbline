@@ -1,92 +1,107 @@
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
-import PageHeader from "@/components/PageHeader";
+import { Section } from "@/components/Badges";
+import { EmptyState, ErrorState } from "@/components/States";
 
 export const dynamic = "force-dynamic";
 
+function duration(s: { started_at: string; completed_at: string | null }) {
+  if (!s.completed_at) return "—";
+  const ms =
+    new Date(s.completed_at).getTime() - new Date(s.started_at).getTime();
+  return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+}
+
+function statusTone(status: string) {
+  if (status === "COMPLETED") return "text-healthy";
+  if (status === "FAILED") return "text-critical";
+  return "text-medium";
+}
+
 export default async function ScansPage() {
-  const page = await api.scans();
+  const scans = await api.scans().catch(() => null);
+  if (!scans) {
+    return <ErrorState detail="Couldn't load scan history." />;
+  }
 
   return (
-    <div>
-      <PageHeader
-        title="Scans"
-        description="Every terraform plan ingested by PlumbLine — the audit trail of when we checked reality."
-      />
-
-      <div className="overflow-hidden rounded-xl border border-[#e5e8ec] bg-white">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-[#eef0f3] text-[11px] font-medium uppercase tracking-wide text-[#8a94a3]">
-              <th className="px-5 py-3">Scan</th>
-              <th className="px-5 py-3">Status</th>
-              <th className="px-5 py-3">Env</th>
-              <th className="px-5 py-3 text-right">Detected</th>
-              <th className="px-5 py-3 text-right">Resolved</th>
-              <th className="px-5 py-3">Commit</th>
-              <th className="px-5 py-3">When</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#eef0f3]">
-            {page.items.map((s) => (
-              <tr key={s.id} className="transition-colors hover:bg-[#f8f9fb]">
-                <td className="mono px-5 py-3 text-[13px] text-[#2563eb]">
-                  {s.id.slice(0, 8)}
-                </td>
-                <td className="px-5 py-3">
-                  <span
-                    className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${
-                      s.status === "COMPLETED"
-                        ? "text-emerald-700"
-                        : s.status === "FAILED"
-                          ? "text-red-600"
-                          : "text-amber-700"
-                    }`}
-                  >
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        s.status === "COMPLETED"
-                          ? "bg-emerald-500"
-                          : s.status === "FAILED"
-                            ? "bg-red-500"
-                            : "bg-amber-500"
-                      }`}
-                    />
-                    {s.status.charAt(0) + s.status.slice(1).toLowerCase()}
-                  </span>
-                </td>
-                <td className="mono px-5 py-3 text-[12px] text-[#8a94a3]">
-                  {s.environment}
-                </td>
-                <td className="px-5 py-3 text-right text-[13px]">
-                  {s.drift_detected}
-                </td>
-                <td className="px-5 py-3 text-right text-[13px]">
-                  {s.drift_resolved}
-                </td>
-                <td className="mono px-5 py-3 text-[12px] text-[#8a94a3]">
-                  {s.commit_sha ? s.commit_sha.slice(0, 7) : "—"}
-                </td>
-                <td className="px-5 py-3 text-[12px] text-[#8a94a3]">
-                  {relativeTime(s.completed_at ?? s.started_at)}
-                </td>
-              </tr>
-            ))}
-            {page.items.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-5 py-14 text-center">
-                  <p className="text-[13px] font-medium text-[#5c6675]">
-                    No scans yet
-                  </p>
-                  <p className="mt-1 text-[12px] text-[#8a94a3]">
-                    Trigger the drift-scan workflow in GitHub Actions.
-                  </p>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+    <div className="space-y-4">
+      <div className="flex items-baseline gap-3">
+        <h1 className="text-[15px] font-semibold tracking-tight">Scans</h1>
+        <span className="text-[12px] text-faint">
+          every Terraform plan PlumbLine ingested
+        </span>
       </div>
+
+      <Section padded={false}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-border text-[10px] font-medium uppercase tracking-widest text-faint">
+                <th className="px-3 py-2">Scan</th>
+                <th className="px-3 py-2">Env</th>
+                <th className="px-3 py-2">Commit</th>
+                <th className="px-3 py-2">Started</th>
+                <th className="px-3 py-2">Duration</th>
+                <th className="px-3 py-2 text-right">Detected</th>
+                <th className="px-3 py-2 text-right">Resolved</th>
+                <th className="px-3 py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {scans.items.map((s) => (
+                <tr
+                  key={s.id}
+                  className="transition-colors hover:bg-hover"
+                >
+                  <td className="px-3 py-2">
+                    <Link
+                      href={`/scans/${s.id}`}
+                      className="mono text-[12px] text-text hover:text-accent"
+                    >
+                      {s.id.slice(0, 8)}
+                    </Link>
+                  </td>
+                  <td className="mono px-3 py-2 text-[11px] text-muted">
+                    {s.environment}
+                  </td>
+                  <td className="mono px-3 py-2 text-[11px] text-muted">
+                    {s.commit_sha.slice(0, 7)}
+                  </td>
+                  <td className="px-3 py-2 text-[11px] text-faint">
+                    {relativeTime(s.started_at)}
+                  </td>
+                  <td className="mono px-3 py-2 text-[11px] text-muted">
+                    {duration(s)}
+                  </td>
+                  <td className="px-3 py-2 text-right text-[12px] tabular-nums">
+                    <span className={s.drift_detected ? "text-text" : "text-faint"}>
+                      {s.drift_detected}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-right text-[12px] tabular-nums text-faint">
+                    {s.drift_resolved}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={`text-[11px] font-medium ${statusTone(s.status)}`}
+                    >
+                      {s.status.toLowerCase()}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {scans.items.length === 0 && (
+            <EmptyState
+              title="No scans yet"
+              hint="The hourly GitHub Actions workflow ingests plans here."
+            />
+          )}
+        </div>
+      </Section>
     </div>
   );
 }
