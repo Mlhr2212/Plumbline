@@ -1,19 +1,39 @@
 # PlumbLine Frontend
 
-The frontend (Next.js/React) is owned and implemented separately against the
-shared API contract exposed by `backend/` (see the root README for endpoints).
+Next.js (App Router) + Tailwind UI for the PlumbLine drift-detection platform,
+built against the backend contract in `backend/` (see the root README for the
+endpoint list).
 
-Key surfaces the backend guarantees:
+## What it shows
 
-- `GET /api/v1/overview` — dashboard aggregates
-- `GET /api/v1/drifts` (+ filters) — drift event list
-- `GET /api/v1/drifts/{id}` — full normalized drift event
-- `GET /api/v1/drifts/{id}/timeline` — **Drift Replay** forensic timeline;
-  each entry carries `certainty` (`confirmed` vs `inferred`) — render these
-  differently and never fabricate missing events
-- `GET /api/v1/drifts/{id}/dependencies` — "Known Dependency Impact"
-  (Terraform-derived only — label it accordingly)
-- `GET /api/v1/drifts/{id}/remediation-preview` — predicted actions, risk
-  before/after, confidence, reasons
-- `POST /api/v1/drifts/{id}/reconcile | accept | ignore | acknowledge`
-- `GET /api/v1/scans`, `GET /api/v1/reconciliations`
+- **Overview** (`/`) — active drift count, severity breakdown, last-scan
+  status, open incidents.
+- **Drift Events** (`/drifts`) — filterable table (severity, status) with a
+  generated plain-English summary per row.
+- **Drift detail** (`/drifts/:id`) — the investigation page: plain-English
+  summary, "who did it" CloudTrail attribution card, attribute diffs, known
+  dependency impact, risk-factor breakdown, **Drift Replay** timeline, and
+  Remediation Preview with lifecycle actions.
+- **Scans** (`/scans`) — ingest audit trail.
+
+### UI semantics
+
+- Confirmed timeline events render as solid markers; **inferred** events are
+  dashed/faded and marked `inferred` — the UI never presents inference as fact.
+- "Known Dependency Impact" is labeled as Terraform-reference-derived only.
+- Mutation endpoints (`reconcile`, `accept`, `ignore`, `acknowledge`) are
+  proxied through `app/api/drifts/[id]/[action]/route.ts`, which attaches
+  `x-api-key` server-side — the API key never reaches the browser.
+
+## Run it
+
+```bash
+cp .env.example .env.local   # set PLUMBLINE_API_URL (+ PLUMBLINE_API_KEY for actions)
+npm install
+npm run dev                  # http://localhost:3000
+```
+
+| Env var | Purpose |
+|---|---|
+| `PLUMBLINE_API_URL` | Backend base URL (default `http://localhost:8000`) |
+| `PLUMBLINE_API_KEY` | Required only for drift lifecycle actions (reconcile/accept/ignore/acknowledge) |
