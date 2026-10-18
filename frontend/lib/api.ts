@@ -48,7 +48,8 @@ export async function postAction(
 }
 
 export const api = {
-  health: () => get<{ status: string; service: string; version: string }>("/api/v1/health"),
+  health: () =>
+    get<{ status: string; service: string; version: string }>("/health"),
   overview: () => get<Overview>("/api/v1/overview"),
   drifts: (params: Record<string, string | undefined>) => {
     const q = new URLSearchParams();
