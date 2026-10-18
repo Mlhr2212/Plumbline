@@ -28,6 +28,11 @@ output "api_public_ip" {
   value = aws_instance.api.public_ip
 }
 
+output "frontend_url" {
+  description = "Public URL of the hosted UI."
+  value       = "http://${aws_instance.api.public_ip}:3000"
+}
+
 output "dynamodb_tables" {
   value = {
     drifts          = aws_dynamodb_table.drifts.name

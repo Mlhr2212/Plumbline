@@ -35,6 +35,14 @@ resource "aws_security_group" "api" {
     cidr_blocks = [var.api_ingress_cidr]
   }
 
+  ingress {
+    description = "PlumbLine UI"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = [var.frontend_ingress_cidr]
+  }
+
   dynamic "ingress" {
     for_each = var.ssh_cidr != "" ? [var.ssh_cidr] : []
     content {
@@ -76,6 +84,22 @@ resource "aws_s3_object" "backend_code" {
   tags   = var.tags
 }
 
+# Frontend ships as a Next.js standalone build (.next/standalone with
+# .next/static copied inside). Build first: cd frontend && npm run build.
+data "archive_file" "frontend" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../frontend/.next/standalone"
+  output_path = "${path.module}/.build/frontend.zip"
+}
+
+resource "aws_s3_object" "frontend_code" {
+  bucket = aws_s3_bucket.plan_artifacts.id
+  key    = "code/frontend-${data.archive_file.frontend.output_sha}.zip"
+  source = data.archive_file.frontend.output_path
+  etag   = filemd5(data.archive_file.frontend.output_path)
+  tags   = var.tags
+}
+
 resource "aws_instance" "api" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.api_instance_type
@@ -87,12 +111,13 @@ resource "aws_instance" "api" {
   # changes so bootstrap edits actually take effect.
   user_data_replace_on_change = true
 
-  depends_on = [aws_s3_object.backend_code]
+  depends_on = [aws_s3_object.backend_code, aws_s3_object.frontend_code]
 
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
     region         = var.aws_region
     code_bucket    = aws_s3_bucket.plan_artifacts.id
     code_key       = aws_s3_object.backend_code.key
+    frontend_key   = aws_s3_object.frontend_code.key
     environment    = var.environment
     drifts_table   = aws_dynamodb_table.drifts.name
     scans_table    = aws_dynamodb_table.scans.name

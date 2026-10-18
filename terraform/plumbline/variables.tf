@@ -51,6 +51,12 @@ variable "api_ingress_cidr" {
   default     = "0.0.0.0/0"
 }
 
+variable "frontend_ingress_cidr" {
+  description = "CIDR allowed to reach the UI on port 3000. Default is open for the portfolio demo — restrict for anything real."
+  type        = string
+  default     = "0.0.0.0/0"
+}
+
 variable "ssh_cidr" {
   description = "Optional CIDR allowed SSH access (empty = no SSH rule)."
   type        = string

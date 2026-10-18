@@ -43,6 +43,29 @@ ENV
 chmod 600 "$APP_DIR/.env"
 
 useradd --system --no-create-home --shell /usr/sbin/nologin plumbline || true
+
+# ── Frontend (Next.js standalone) ─────────────────────────────────────────
+# Pinned Node 20 LTS — official tarball, no distro package surprises.
+NODE_VER=v20.18.1
+curl -fsSL "https://nodejs.org/dist/$NODE_VER/node-$NODE_VER-linux-x64.tar.xz" -o /tmp/node.tar.xz
+mkdir -p /opt/node
+tar -xJf /tmp/node.tar.xz -C /opt/node --strip-components=1
+
+FE_DIR=/opt/plumbline/frontend
+mkdir -p "$FE_DIR"
+aws s3 cp "s3://${code_bucket}/${frontend_key}" /tmp/frontend.zip --region "${region}"
+unzip -o /tmp/frontend.zip -d "$FE_DIR"
+
+# The UI's server-side fetches hit the API over localhost — the API key is
+# never sent to the browser; it only lives in this env file.
+cat > "$FE_DIR/.env" <<ENV
+PLUMBLINE_API_URL=http://localhost:8000
+PLUMBLINE_API_KEY=$API_KEY
+PORT=3000
+HOSTNAME=0.0.0.0
+ENV
+chmod 600 "$FE_DIR/.env"
+
 chown -R plumbline:plumbline /opt/plumbline
 
 cat > /etc/systemd/system/plumbline.service <<UNIT
@@ -63,5 +86,23 @@ RestartSec=5
 WantedBy=multi-user.target
 UNIT
 
+cat > /etc/systemd/system/plumbline-frontend.service <<UNIT
+[Unit]
+Description=PlumbLine UI (Next.js)
+After=network.target plumbline.service
+
+[Service]
+Type=simple
+User=plumbline
+WorkingDirectory=$FE_DIR
+EnvironmentFile=$FE_DIR/.env
+ExecStart=/opt/node/bin/node $FE_DIR/server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
 systemctl daemon-reload
-systemctl enable --now plumbline
+systemctl enable --now plumbline plumbline-frontend
