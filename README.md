@@ -132,12 +132,41 @@ timestamp window. Plan bodies are capped (default 20 MiB). Sensitive values
 flagged by Terraform's `*_sensitive` masks are redacted by the CI uploader
 *and* again server-side (defense in depth).
 
+## Frontend — investigation UI
+
+Next.js 15 (App Router) + TypeScript + Tailwind v4 in `frontend/` — a dark,
+dense "operational control plane" built on the API contract above.
+
+- **Overview** (`/`) — health headline → "Needs attention" (the single most
+  important drift) → derived Drift Health score (formula shown) → severity
+  mix, recent scans, recently resolved.
+- **Drift Explorer** (`/drifts`) — compact filter bar (`/` to search,
+  multi-select severity/status/service), sortable + density-toggleable
+  table, and a right-side **row inspector** for triage without navigation.
+- **Incident** (`/drifts/:id`) — the flagship page: selectable **Drift
+  Replay** (confirmed = solid, inferred = dashed) where clicking an event
+  opens its evidence inspector; structured SG/IAM diffs (firewall rules read
+  like rules, not JSON paths; `0.0.0.0/0` flagged as public); **explainable
+  risk score**; expandable attribution-confidence evidence; remediation
+  slide-over with a meaningful confirmation; focus mode; prev/next
+  quick-switcher.
+- **⌘K command palette** — searches Terraform addresses, scan IDs,
+  severities; "Run scan" links to the real workflow dispatch page.
+- Plus: global **Timeline** feed, **Scans** audit trail + detail,
+  **Reconciliations**, **Infrastructure** (resources observed through plans),
+  **Settings**.
+
+Data boundaries: the UI never decides drift, risk, confidence, or
+remediation eligibility — those come from the backend. Mutations proxy
+through server-side route handlers that attach `x-api-key`; secrets never
+reach the browser. Unknown actors render as unknown — nothing is invented.
+
 ## Repository layout
 
 ```
 backend/app/        FastAPI app (api, domain, parsers, services, repositories, integrations)
 backend/tests/      pytest suite + sanitized plan-JSON fixtures
-frontend/           owned separately (API contract in frontend/README.md)
+frontend/           Next.js investigation UI (see frontend/README.md)
 terraform/sandbox/  small demo env (SG+EC2+S3+IAM+Lambda) for real drift
 terraform/plumbline/ platform infra (DynamoDB, S3, OIDC scanner role, API role)
 scripts/ingest_plan.py  stdlib-only HMAC-signed plan uploader for CI
@@ -154,8 +183,16 @@ cp .env.example .env        # storage_backend=memory needs no AWS
 .venv/bin/python -m pytest tests -q     # 70 tests
 ```
 
-Try a scan locally:
+Frontend:
 
+```bash
+cd frontend
+npm install
+cp .env.example .env.local   # PLUMBLINE_API_URL + PLUMBLINE_API_KEY
+npm run dev                  # → http://localhost:3000
+```
+
+Try a scan locally:
 ```bash
 curl -X POST localhost:8000/api/v1/scans/ingest -H 'content-type: application/json' \
   -d "$(python3 -c 'import json;print(json.dumps({"environment":"dev","terraform_exit_code":2,"plan_json":json.load(open("tests/fixtures/plan_sg_ssh_open.json"))}))')"
@@ -176,6 +213,14 @@ curl localhost:8000/api/v1/drifts
   target). Set `PLUMBLINE_STORAGE_BACKEND=dynamodb` + env vars per
   `.env.example`. Detection is read-only; remediation is a separate IAM
   boundary and off by default.
+- **UI + API are co-located on one EC2 instance.** The frontend ships as a
+  Next.js standalone bundle via the same S3-artifact pattern as the backend;
+  `user_data` installs Node 20 and runs a second systemd unit
+  (`plumbline-frontend`, port 3000) whose server-side fetches hit
+  `http://localhost:8000`. An Elastic IP pins the public endpoint across the
+  instance replacements that `user_data_replace_on_change` produces, so the
+  URLs in `terraform output` never change. To redeploy: `npm run build` in
+  `frontend/`, then `terraform apply` in `terraform/plumbline`.
 
 ## Security posture
 
