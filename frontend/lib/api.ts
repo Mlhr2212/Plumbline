@@ -47,6 +47,27 @@ export async function postAction(
   return { ok: res.ok, status: res.status, data };
 }
 
+/** Mask IPv4 to two octets — demo attribution can contain the operator's
+ *  home IP; the UI renders `a.b.x.x` instead. */
+function maskIp(v: unknown): unknown {
+  if (typeof v !== "string") return v;
+  return v.replace(/\b(\d{1,3}\.\d{1,3})\.\d{1,3}\.\d{1,3}\b/g, "$1.x.x");
+}
+
+/** Redact PII-ish fields before data reaches the browser. */
+function redactEvent(d: DriftEvent): DriftEvent {
+  const a = d.cloudtrail_attribution;
+  return a?.source_ip
+    ? {
+        ...d,
+        cloudtrail_attribution: {
+          ...a,
+          source_ip: maskIp(a.source_ip) as string,
+        },
+      }
+    : d;
+}
+
 export const api = {
   health: () =>
     get<{ status: string; service: string; version: string }>("/health"),
@@ -55,11 +76,23 @@ export const api = {
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) if (v) q.set(k, v);
     const qs = q.toString();
-    return get<Page<DriftEvent>>(`/api/v1/drifts${qs ? `?${qs}` : ""}`);
+    return get<Page<DriftEvent>>(`/api/v1/drifts${qs ? `?${qs}` : ""}`).then(
+      (p) => ({ ...p, items: p.items.map(redactEvent) }),
+    );
   },
-  drift: (id: string) => get<DriftEvent>(`/api/v1/drifts/${id}`),
-  timeline: (id: string) =>
-    get<TimelineEvent[]>(`/api/v1/drifts/${id}/timeline`),
+  drift: (id: string) =>
+    get<DriftEvent>(`/api/v1/drifts/${id}`).then(redactEvent),
+  timeline: async (id: string) => {
+    const events = await get<TimelineEvent[]>(
+      `/api/v1/drifts/${id}/timeline`,
+    );
+    return events.map((e) => ({
+      ...e,
+      metadata: Object.fromEntries(
+        Object.entries(e.metadata ?? {}).map(([k, v]) => [k, maskIp(v)]),
+      ),
+    }));
+  },
   dependencies: (id: string) =>
     get<DependencySummary>(`/api/v1/drifts/${id}/dependencies`),
   remediationPreview: (id: string) =>

@@ -88,8 +88,16 @@ export default function AttributionPanel({
         {a.source_ip && (
           <div className="flex justify-between gap-3">
             <dt className="text-faint">Source IP</dt>
-            <dd>
+            <dd className="flex items-center gap-1.5">
               <CopyableValue value={a.source_ip} />
+              {a.source_ip.endsWith(".x.x") && (
+                <span
+                  className="text-[9px] uppercase tracking-wide text-faint"
+                  title="Redacted before reaching the browser"
+                >
+                  redacted
+                </span>
+              )}
             </dd>
           </div>
         )}
