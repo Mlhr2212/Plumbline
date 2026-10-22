@@ -9,16 +9,26 @@ Terraform-managed AWS infrastructure, reconstructs the forensic story of what
 happened (**Drift Replay**), scores risk deterministically, correlates AWS
 CloudTrail evidence, and drives reconciliation through reviewable workflows.
 
+```mermaid
+flowchart TB
+    subgraph CI["GitHub Actions · hourly"]
+        PLAN["terraform init / plan<br/>-detailed-exitcode"] --> JSON["terraform show -json"]
+        JSON --> SIGN["ingest_plan.py<br/>HMAC-SHA256 signed"]
+    end
+    subgraph PIPE["PlumbLine pipeline"]
+        PARSE["plan parser<br/>resource_drift only"] --> DIFF["attribute diff<br/>fingerprint / dedupe"]
+        DIFF --> RISK["risk engine<br/>deterministic rules"]
+        RISK --> ATTR["CloudTrail attribution<br/>explicit confidence"]
+        ATTR --> DEPS["dependency context<br/>remediation eligibility"]
+    end
+    SIGN -->|"POST /api/v1/scans/ingest"| PARSE
+    DEPS --> PERSIST["persist + resolve pass"]
+    PERSIST --> DB[("DynamoDB<br/>drifts · scans · timeline · reconciliations")]
+    DB --> REST["REST API"] --> UI["Next.js UI<br/>server-side fetch"] --> USER(["engineer"])
 ```
-GitHub Actions (scheduled)
-  → terraform init / plan -detailed-exitcode -out=tfplan
-  → terraform show -json tfplan
-  → HMAC-signed ingest
-  → plan parser → resource_drift extraction → attribute diff
-  → fingerprint/dedupe → risk engine → CloudTrail attribution
-  → dependency context → remediation eligibility
-  → persist → REST API → frontend
-```
+
+Full diagrams — sequence, lifecycle, domain model (UML), deployment — in
+**[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
 **Architectural principle:** Terraform is the detection engine. PlumbLine never
 reimplements provider refresh or state comparison — it builds operational
@@ -111,6 +121,31 @@ scans: identical drift updates `last_seen_at`/`scan_count`; materially
 different drift on the same resource supersedes the old event; drift that
 disappears resolves the event.
 
+## Drift lifecycle
+
+Every drift event is a state machine — scans drive some transitions, the API
+drives the rest:
+
+```mermaid
+stateDiagram-v2
+    [*] --> OPEN : scan detects drift
+    state Active {
+        OPEN --> OPEN : re-observed, same<br/>fingerprint (scan_count ++)
+        OPEN --> ACKNOWLEDGED : POST /acknowledge
+        OPEN --> REMEDIATION_REQUESTED : POST /reconcile
+        ACKNOWLEDGED --> REMEDIATION_REQUESTED : POST /reconcile
+    }
+    Active --> RESOLVED : drift absent in a later scan
+    Active --> SUPERSEDED : fingerprint changed<br/>→ new drift event created
+    Active --> ACCEPTED : POST /accept
+    Active --> IGNORED : POST /ignore
+    note right of Active
+        Terminal: RESOLVED, SUPERSEDED, ACCEPTED, IGNORED —
+        stale-drift guard rejects API actions with 409.
+        RECONCILING is declared but reserved (never assigned).
+    end note
+```
+
 ## API
 
 FastAPI (`backend/app/main.py`). Highlights:
@@ -164,6 +199,7 @@ reach the browser. Unknown actors render as unknown — nothing is invented.
 ## Repository layout
 
 ```
+ARCHITECTURE.md     Diagrams: context, sequence, lifecycle, domain model, deployment
 backend/app/        FastAPI app (api, domain, parsers, services, repositories, integrations)
 backend/tests/      pytest suite + sanitized plan-JSON fixtures
 frontend/           Next.js investigation UI (see frontend/README.md)
