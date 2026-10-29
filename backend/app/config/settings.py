@@ -21,8 +21,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # --- persistence ---
-    # "memory" for local dev/tests, "dynamodb" for AWS deployments.
+    # "memory" for tests/ephemeral dev, "sqlite" for durable local use,
+    # "dynamodb" for AWS deployments.
     storage_backend: str = "memory"
+    sqlite_path: str = "plumbline.db"
     aws_region: str = "us-east-1"
     ddb_table_drifts: str = "plumbline-drifts"
     ddb_table_scans: str = "plumbline-scans"
@@ -31,7 +33,7 @@ class Settings(BaseSettings):
 
     # --- ingestion auth ---
     # Shared HMAC secret used by CI to sign plan uploads. Empty disables auth
-    # ONLY when storage_backend == "memory" (local dev convenience).
+    # ONLY for local backends ("memory"/"sqlite") — see deps.require_ingest_auth.
     ingest_hmac_secret: str = ""
     ingest_max_plan_bytes: int = 20 * 1024 * 1024  # 20 MiB hard cap
     ingest_signature_window_seconds: int = 300

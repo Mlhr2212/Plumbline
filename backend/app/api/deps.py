@@ -30,7 +30,9 @@ def get_enricher(settings: Settings = Depends(get_settings)) -> CloudTrailEnrich
     if not settings.attribution_enabled:
         return None
     lookup = None
-    if settings.storage_backend == "dynamodb":
+    # Any real deployment — or a self-hosted user with ambient AWS creds —
+    # gets CloudTrail lookups; lookup failures degrade to "unknown".
+    if settings.storage_backend != "memory":
         from app.integrations.aws.cloudtrail import CloudTrailLookupClient
         lookup = CloudTrailLookupClient(settings.aws_region)
     return CloudTrailEnricher(lookup, settings.attribution_lookback_hours)
@@ -48,11 +50,12 @@ async def require_ingest_auth(request: Request,
                               settings: Settings = Depends(get_settings)) -> None:
     """HMAC-signature auth for plan ingestion.
 
-    Local-dev escape hatch: if no secret is configured AND the memory backend
-    is in use, requests are allowed (nothing real is at stake).
+    Local-dev escape hatch: if no secret is configured AND a local backend
+    (memory/sqlite) is in use, requests are allowed — nothing leaves the
+    machine, so there is nothing real at stake.
     """
     if not settings.ingest_hmac_secret:
-        if settings.storage_backend == "memory":
+        if settings.storage_backend in ("memory", "sqlite"):
             return
         raise ApiError(503, "ingestion endpoint is not configured (missing HMAC secret)")
     body = await request.body()
@@ -71,7 +74,7 @@ def require_api_key(request: Request,
                     settings: Settings = Depends(get_settings)) -> None:
     """API-key auth for mutation endpoints when a key is configured."""
     if not settings.api_key:
-        if settings.storage_backend == "memory":
+        if settings.storage_backend in ("memory", "sqlite"):
             return
         raise ApiError(503, "mutation endpoints require PLUMBLINE_API_KEY")
     if request.headers.get("x-api-key") != settings.api_key:
