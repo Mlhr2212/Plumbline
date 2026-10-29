@@ -16,6 +16,15 @@ class Repositories:
 
 
 def build_repositories(settings: Settings) -> Repositories:
+    if settings.storage_backend == "sqlite":
+        from app.repositories import sqlite
+        return Repositories(
+            drifts=sqlite.SqliteDriftRepository(settings.sqlite_path),
+            scans=sqlite.SqliteScanRepository(settings.sqlite_path),
+            timeline=sqlite.SqliteTimelineRepository(settings.sqlite_path),
+            reconciliations=sqlite.SqliteReconciliationRepository(
+                settings.sqlite_path),
+        )
     if settings.storage_backend == "dynamodb":
         import boto3
         from app.repositories import dynamodb
