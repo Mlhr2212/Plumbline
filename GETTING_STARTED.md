@@ -61,6 +61,39 @@ curl localhost:8000/api/v1/overview                            # dashboard summa
 
 Interactive API docs: `http://localhost:8000/docs`
 
+## Use it privately on your own Terraform
+
+Downloaded the repo and want PlumbLine as *your* tool? It runs fully offline —
+no AWS account required, nothing sent anywhere:
+
+```bash
+cd backend
+python3 -m venv .venv && .venv/bin/pip install -e .
+PLUMBLINE_STORAGE_BACKEND=sqlite .venv/bin/uvicorn app.main:app --port 8000
+```
+
+`sqlite` mode writes everything to one `plumbline.db` file so your drift
+history survives restarts (the default `memory` mode forgets on exit).
+
+Scan any of your own Terraform working directories with one command:
+
+```bash
+scripts/local_scan.sh path/to/my-infra          # plan → ingest → done
+scripts/local_scan.sh path/to/my-infra prod     # tag it as another environment
+```
+
+The script runs `terraform plan -detailed-exitcode`, converts to JSON,
+redacts Terraform-flagged sensitive values, and POSTs to `localhost:8000`.
+No HMAC secret or API key is needed on local backends — those controls exist
+for the deployed API, not your laptop. Point the frontend at it
+(`PLUMBLINE_API_URL=http://localhost:8000` in `frontend/.env.local`) and the
+whole investigation UI works on your own data.
+
+If you happen to have AWS credentials configured locally (`aws sso login` or
+a profile), CloudTrail attribution also works — the same code path the
+deployed service uses. Without credentials, incidents simply show actor
+`unknown`; nothing breaks.
+
 ## Try the real thing on AWS (the demo)
 
 Prereqs: an AWS sandbox account (NOT production), Terraform ≥1.5, AWS CLI.

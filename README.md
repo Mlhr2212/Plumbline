@@ -206,6 +206,7 @@ frontend/           Next.js investigation UI (see frontend/README.md)
 terraform/sandbox/  small demo env (SG+EC2+S3+IAM+Lambda) for real drift
 terraform/plumbline/ platform infra (DynamoDB, S3, OIDC scanner role, API role)
 scripts/ingest_plan.py  stdlib-only HMAC-signed plan uploader for CI
+scripts/local_scan.sh   one-command private scan: plan → ingest → done
 .github/workflows/drift-scan.yml  scheduled scan via GitHub OIDC
 ```
 
@@ -216,8 +217,33 @@ cd backend
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 cp .env.example .env        # storage_backend=memory needs no AWS
 .venv/bin/uvicorn app.main:app --reload
-.venv/bin/python -m pytest tests -q     # 70 tests
+.venv/bin/python -m pytest tests -q     # 77 tests
 ```
+
+## Self-hosted & fully private
+
+PlumbLine can run entirely on your own machine against your own Terraform —
+**no AWS account, no external calls, no telemetry**. Clone it, and everything
+stays on your disk.
+
+```bash
+cd backend
+python3 -m venv .venv && .venv/bin/pip install -e .
+PLUMBLINE_STORAGE_BACKEND=sqlite .venv/bin/uvicorn app.main:app --port 8000
+```
+
+Then scan any Terraform directory in one command:
+
+```bash
+scripts/local_scan.sh path/to/your/terraform        # → plan → ingest → done
+```
+
+The `sqlite` backend keeps drifts, scans, replay timelines, and
+reconciliations in a single `plumbline.db` file — history survives restarts
+(`memory` works too but forgets on exit). Data boundaries that hold in AWS
+hold here: nothing is uploaded anywhere, auth escape-hatches apply only to
+local backends, and CloudTrail attribution runs only if your ambient AWS
+credentials allow it — otherwise events report `unknown`, honestly.
 
 Frontend:
 
