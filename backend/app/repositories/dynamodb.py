@@ -62,19 +62,45 @@ def _decode_key(cursor: Optional[str]) -> Optional[dict]:
         return None
 
 
-def _scan(table, model, filters, cursor, limit):
-    kwargs: dict[str, Any] = {"Limit": limit}
+def _scan(table, model, filters, cursor, limit, sort_attr=None):
     expr = None
     for k, v in filters.items():
         if v is None:
             continue
         cond = Attr(k).eq(v.value if hasattr(v, "value") else v)
         expr = cond if expr is None else expr & cond
+
+    if sort_attr:
+        # Scan order is arbitrary, so ordering requires reading the full
+        # filtered set and sorting in memory — same semantics as the
+        # in-memory repositories. Tables are small (hundreds of items); a
+        # time-keyed GSI would be needed to order at scale.
+        kwargs: dict[str, Any] = {}
+        if expr is not None:
+            kwargs["FilterExpression"] = expr
+        items = []
+        while True:
+            resp = table.scan(**kwargs)
+            items.extend(model.model_validate(_from_ddb(i))
+                         for i in resp.get("Items", []))
+            lek = resp.get("LastEvaluatedKey")
+            if not lek:
+                break
+            kwargs["ExclusiveStartKey"] = lek
+        items.sort(key=lambda i: getattr(i, sort_attr), reverse=True)
+        start = int(base64.b64decode(cursor).decode()) if cursor else 0
+        chunk = items[start:start + limit]
+        nxt = start + limit
+        token = base64.b64encode(str(nxt).encode()).decode() \
+            if nxt < len(items) else None
+        return chunk, token
+
+    kwargs = {"Limit": limit}
     if expr is not None:
         kwargs["FilterExpression"] = expr
-    start = _decode_key(cursor)
-    if start:
-        kwargs["ExclusiveStartKey"] = start
+    start_key = _decode_key(cursor)
+    if start_key:
+        kwargs["ExclusiveStartKey"] = start_key
     resp = table.scan(**kwargs)
     return [model.model_validate(_from_ddb(i)) for i in resp.get("Items", [])], \
         _encode_key(resp.get("LastEvaluatedKey"))
@@ -116,7 +142,8 @@ class DynamoDriftRepository:
         return [DriftEvent.model_validate(_from_ddb(i)) for i in resp.get("Items", [])]
 
     def list(self, filters, cursor, limit):
-        return _scan(self._t, DriftEvent, filters, cursor, limit)
+        return _scan(self._t, DriftEvent, filters, cursor, limit,
+                     sort_attr="detected_at")
 
 
 class DynamoScanRepository:
@@ -132,7 +159,8 @@ class DynamoScanRepository:
         return Scan.model_validate(_from_ddb(item)) if item else None
 
     def list(self, filters, cursor, limit):
-        return _scan(self._t, Scan, filters, cursor, limit)
+        return _scan(self._t, Scan, filters, cursor, limit,
+                     sort_attr="started_at")
 
 
 class DynamoTimelineRepository:
@@ -172,4 +200,5 @@ class DynamoReconciliationRepository:
                 for i in resp.get("Items", [])]
 
     def list(self, filters, cursor, limit):
-        return _scan(self._t, ReconciliationProposal, filters, cursor, limit)
+        return _scan(self._t, ReconciliationProposal, filters, cursor, limit,
+                     sort_attr="created_at")
